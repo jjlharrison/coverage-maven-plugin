@@ -107,10 +107,10 @@ timeout(time: 3, unit: 'HOURS') {
                 print "Release Notification Recipients: " + releaseNotificationRecipients.join(" ")
 
                 // Send release notification with link to release notes.
-                emailext(subject: "Release Notification: ITIS Maven Plugin ${version}",
-                        body: """<h2>ITIS Maven Plugin ${version}</h2>
-                                  <p>ITIS Maven Plugin ${version} has been released and is now available from the Cognitran Maven repository.</p>
-                                  <p>Documentation for this version is at https://bitbucket.org/cognitranlimited/itis-maven-plugin/src/master/README.md</p>""",
+                emailext(subject: "Release Notification: Coverage Maven Plugin ${version}",
+                        body: """<h2>Coverage Maven Plugin ${version}</h2>
+                                  <p>Coverage Maven Plugin ${version} has been released and is now available from the Cognitran Maven repository.</p>
+                                  <p>Documentation for this version is at https://bitbucket.org/cognitranlimited/products-coverage/src/master/README.md</p>""",
                         mimeType: "text/html",
                         to: releaseNotificationRecipients.join(" "))
             }

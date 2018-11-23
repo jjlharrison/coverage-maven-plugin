@@ -6,11 +6,11 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="itis-maven-plugin" />
+        <module name="coverage-maven-plugin" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="itis-maven-plugin" target="1.8" />
+      <module name="coverage-maven-plugin" target="1.8" />
     </bytecodeTargetLevel>
   </component>
 </project>
