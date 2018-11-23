@@ -84,9 +84,11 @@ public class UpdateCoverageRequirementMojo extends AbstractMojo
                     final Document doc = parseDocumentFromFile(pom);
 
                     final boolean lineRequirementUpdated = updateCoverageRequirementProperty("line", doc,
-                                                                                             jacocoLineCoverageMinimumProperty, 2);
+                                                                                             jacocoLineCoverageMinimumProperty,
+                                                                                             getCurrentLineCoveragePercentage());
                     final boolean branchRequirementUpdated = updateCoverageRequirementProperty("branch", doc,
-                                                                                               jacocoBranchCoverageMinimumProperty, 4);
+                                                                                               jacocoBranchCoverageMinimumProperty,
+                                                                                               getCurrentBranchCoveragePercentage());
                     if (lineRequirementUpdated || branchRequirementUpdated)
                     {
                         writeDocument(doc, pom);
@@ -102,12 +104,12 @@ public class UpdateCoverageRequirementMojo extends AbstractMojo
      * @param coverageType the coverage type to update the requirement property for.
      * @param doc the document to be updated (POM).
      * @param property the property to update.
-     * @param jacocoReportIndex the JaCoCo report index to determine the current coverage level.
+     * @param currentCoveragePercentage the current coverage percentage.
      * @return whether the property value was changed.
      * @throws MojoExecutionException if the update fails due to invalid input.
      */
     private boolean updateCoverageRequirementProperty(final String coverageType, final Document doc, final String property,
-                                                      final int jacocoReportIndex)
+                                                      final Integer currentCoveragePercentage)
         throws MojoExecutionException
     {
         final Node propertyNode = getPropertyNode(doc, property);
@@ -117,14 +119,13 @@ public class UpdateCoverageRequirementMojo extends AbstractMojo
         }
         else
         {
-            final Integer currentCoverage = getCurrentCoveragePercentage(jacocoReportIndex);
-            if (currentCoverage == null)
+            if (currentCoveragePercentage == null)
             {
                 getLog().info("Could not determine current coverage level, skipping.");
             }
             else
             {
-                return setCoverageRequirement(coverageType, propertyNode, currentCoverage);
+                return setCoverageRequirement(coverageType, propertyNode, currentCoveragePercentage);
             }
         }
         return false;
@@ -157,19 +158,43 @@ public class UpdateCoverageRequirementMojo extends AbstractMojo
     }
 
     /**
-     * Returns the current coverage percentage from the JaCoCo HTML report.
+     * Returns the current branch coverage percentage from the JaCoCo HTML report.
      *
-     * @param jacocoReportIndex the index of the total column containing the desired percentage.
      * @return the coverage percentage, or {@code null} if the percentage could not be retrieved.
      */
-    private Integer getCurrentCoveragePercentage(final int jacocoReportIndex)
+    private Integer getCurrentBranchCoveragePercentage()
     {
         try
         {
             if (jacocoHtmlReport != null && jacocoHtmlReport.isFile())
             {
                 final org.jsoup.nodes.Document jacocoReportDoc = Jsoup.parse(jacocoHtmlReport, "UTF-8");
-                return getFirstDigit(jacocoReportDoc.select("#coveragetable > tfoot > tr > td:eq(" + jacocoReportIndex + ")").text());
+                return getFirstDigit(jacocoReportDoc.select("#coveragetable > tfoot > tr > td:eq(" + 4 + ")").text());
+            }
+            getLog().info("JaCoCo report not found (" + jacocoHtmlReport + ").");
+            return null;
+        }
+        catch (final IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Returns the current line coverage percentage from the JaCoCo HTML report.
+     *
+     * @return the coverage percentage, or {@code null} if the percentage could not be retrieved.
+     */
+    private Integer getCurrentLineCoveragePercentage()
+    {
+        try
+        {
+            if (jacocoHtmlReport != null && jacocoHtmlReport.isFile())
+            {
+                final org.jsoup.nodes.Document jacocoReportDoc = Jsoup.parse(jacocoHtmlReport, "UTF-8");
+                final Integer missedLines = getFirstDigit(jacocoReportDoc.select("#coveragetable > tfoot > tr > td:eq(7)").text());
+                final Integer totalLines = getFirstDigit(jacocoReportDoc.select("#coveragetable > tfoot > tr > td:eq(8)").text());
+                return missedLines == null || totalLines == null ? null : (int) ((1 - ((double) missedLines / (double) totalLines)) * 100);
             }
             getLog().info("JaCoCo report not found (" + jacocoHtmlReport + ").");
             return null;
@@ -283,7 +308,7 @@ public class UpdateCoverageRequirementMojo extends AbstractMojo
             {
                 builder.append(c);
             }
-            else if (builder.length() != 0)
+            else if (c != ',' && builder.length() != 0)
             {
                 break;
             }
