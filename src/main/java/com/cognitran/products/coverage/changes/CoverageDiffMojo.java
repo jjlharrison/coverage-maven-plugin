@@ -1,7 +1,10 @@
 /*
  * Copyright (c) 2019 Cognitran Limited. All Rights Reserved.
  */
-package com.cognitran.products.coverage.changes;import static org.apache.commons.io.output.NullOutputStream.NULL_OUTPUT_STREAM;
+package com.cognitran.products.coverage.changes;
+
+import static com.cognitran.products.coverage.changes.Utilities.capacity;
+import static org.apache.commons.io.output.NullOutputStream.NULL_OUTPUT_STREAM;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,12 +14,13 @@ import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.ToIntFunction;
 import java.util.stream.IntStream;
 
 import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -54,16 +58,16 @@ import com.cognitran.products.coverage.changes.jacoco.JacocoReportParser;
       defaultPhase = LifecyclePhase.POST_SITE)
 public class CoverageDiffMojo extends AbstractMojo
 {
-    /** The Maven project. */
-    @Parameter(defaultValue = "${project}", readonly = true)
-    private MavenProject project;
-
     /** The JaCoCo XML report file. */
     @Parameter(defaultValue = "${project.reporting.outputDirectory}/jacoco/jacoco.xml", required = true)
     private File jacocoHtmlReport;
 
+    /** The Maven project. */
+    @Parameter(defaultValue = "${project}", readonly = true)
+    private MavenProject project;
+
     @Override
-    public void execute() throws MojoExecutionException, MojoFailureException
+    public void execute() throws MojoFailureException
     {
         final Changes changes;
         try (Repository repository = getRepository(); RevWalk walk = new RevWalk(repository))
@@ -87,58 +91,18 @@ public class CoverageDiffMojo extends AbstractMojo
         theRest(changes);
     }
 
-    private void theRest(final Changes changes) throws MojoFailureException
+    private double calculateChangeCoveragePercentage(final List<NewCodeCoverage> coverage,
+                                                     final String type,
+                                                     final ToIntFunction<NewCodeCoverage> coveredExtractor,
+                                                     final ToIntFunction<NewCodeCoverage> totalExtractor)
     {
-        try
-        {
-            final File jacocoXmlReport = new File(project.getBuild().getDirectory(), "site/jacoco/jacoco.xml");
-            if (jacocoXmlReport.isFile())
-            {
-                try (final FileInputStream inputStream = new FileInputStream(jacocoXmlReport))
-                {
-                    final JacocoReportParser parser = new JacocoReportParser(changes.getNewFiles(), changes.getChangedLinesByFile());
-                    Sax.parse(new InputSource(inputStream), parser, false);
-                    parser.getCoverage().stream()
-                        .filter(NewCodeCoverage::hasTestableChanges)
-                        .forEach(coverage -> getLog().info(coverage.toString()));
+        final int coveredChangedBranchesCount = coverage.stream().mapToInt(coveredExtractor).sum();
+        final int totalChangedBranchesCount = coverage.stream().mapToInt(totalExtractor).sum();
 
-                    final int coveredChangedBranchesCount =
-                        parser.getCoverage().stream().mapToInt(NewCodeCoverage::getCoveredChangedBranchesCount).sum();
-                    final int totalChangedBranchesCount =
-                        parser.getCoverage().stream().mapToInt(NewCodeCoverage::getTotalChangedBranchesCount).sum();
-
-                    final double changeCodeBranchCoverage =
-                        ((double) coveredChangedBranchesCount / (double) totalChangedBranchesCount) * 100d;
-                    getLog().info("Changed branches code coverage: " + new DecimalFormat("#.##").format(changeCodeBranchCoverage) + "%");
-
-                    final int coveredChangedLinesCount =
-                        parser.getCoverage().stream().mapToInt(NewCodeCoverage::getCoveredChangedLinesCount).sum();
-                    final int totalChangedLinesCount =
-                        parser.getCoverage().stream().mapToInt(NewCodeCoverage::getTotalChangedLinesCount).sum();
-
-                    final double changeCodeLineCoverage =
-                        ((double) coveredChangedLinesCount / (double) totalChangedLinesCount) * 100d;
-                    getLog().info("Changed line code coverage: " + new DecimalFormat("#.##").format(changeCodeLineCoverage) + "%");
-
-                    if (changeCodeBranchCoverage < 92d)
-                    {
-                        final String message = "92% requirement for test coverage on changed branches not met.";
-                        getLog().error(message);
-                        throw new MojoFailureException(message);
-                    }
-                    if (changeCodeLineCoverage < 92d)
-                    {
-                        final String message = "92% requirement for test coverage on changed lines not met.";
-                        getLog().error(message);
-                        throw new MojoFailureException(message);
-                    }
-                }
-            }
-        }
-        catch (final IOException | SAXException e)
-        {
-            throw new RuntimeException(e);
-        }
+        final double changeCodeBranchCoverage =
+            ((double) coveredChangedBranchesCount / (double) totalChangedBranchesCount) * 100d;
+        getLog().info("Changed " + type + " code coverage: " + new DecimalFormat("#.##").format(changeCodeBranchCoverage) + "%");
+        return changeCodeBranchCoverage;
     }
 
     @NotNull
@@ -157,8 +121,8 @@ public class CoverageDiffMojo extends AbstractMojo
         final URI moduleRootDirectoryUri = URI.create(project.getBasedir().getPath());
         final URI repositoryRelativeModuleDirectoryUri = repositoryRootDirectoryUri.relativize(moduleRootDirectoryUri);
         final List<DiffEntry> diffEntries = formatter.scan(oldTreeParser, newTreeParser);
-        final HashMap<String, Set<Integer>> changedLinesByFile = new HashMap<>(capacity(diffEntries.size()));
-        final HashSet<String> newFiles = new HashSet<>(capacity(diffEntries.size()));
+        final Map<String, Set<Integer>> changedLinesByFile = new HashMap<>(capacity(diffEntries.size()));
+        final Set<String> newFiles = new HashSet<>(capacity(diffEntries.size()));
         final Changes changes = new Changes(changedLinesByFile, newFiles);
         for (final DiffEntry entry : diffEntries)
         {
@@ -197,6 +161,21 @@ public class CoverageDiffMojo extends AbstractMojo
         return changes;
     }
 
+    private RevCommit getMergeBase(final Repository repository, final String source, final String target) throws IOException
+    {
+        try (final RevWalk walk = new RevWalk(repository))
+        {
+            final RevCommit revA = walk.parseCommit(repository.findRef(target).getObjectId());
+            final RevCommit revB = walk.parseCommit(repository.findRef(source).getObjectId());
+            walk.setRevFilter(RevFilter.MERGE_BASE);
+            walk.markStart(revA);
+            walk.markStart(revB);
+            final RevCommit next = walk.next();
+            walk.dispose();
+            return next;
+        }
+    }
+
     private Repository getRepository() throws IOException
     {
         final FileRepositoryBuilder builder = new FileRepositoryBuilder();
@@ -222,34 +201,49 @@ public class CoverageDiffMojo extends AbstractMojo
         return treeParser;
     }
 
-    private RevCommit getMergeBase(final Repository repository, final String source, final String target) throws IOException
+    private void theRest(final Changes changes) throws MojoFailureException
     {
-        try (final RevWalk walk = new RevWalk(repository))
+        try
         {
-            final RevCommit revA = walk.parseCommit(repository.findRef(target).getObjectId());
-            final RevCommit revB = walk.parseCommit(repository.findRef(source).getObjectId());
-            walk.setRevFilter(RevFilter.MERGE_BASE);
-            walk.markStart(revA);
-            walk.markStart(revB);
-            final RevCommit next = walk.next();
-            walk.dispose();
-            return next;
-        }
-    }
+            final File jacocoXmlReport = new File(project.getBuild().getDirectory(), "site/jacoco/jacoco.xml");
+            if (jacocoXmlReport.isFile())
+            {
+                try (final FileInputStream inputStream = new FileInputStream(jacocoXmlReport))
+                {
+                    final JacocoReportParser parser = new JacocoReportParser(changes.getNewFiles(), changes.getChangedLinesByFile());
+                    Utilities.parse(new InputSource(inputStream), parser, false);
+                    final List<NewCodeCoverage> coverage = parser.getCoverage();
+                    coverage.stream()
+                        .filter(NewCodeCoverage::hasTestableChanges)
+                        .forEach(c -> getLog().info(c.toString()));
 
-    public static int capacity(final int expectedSize)
-    {
-        if (expectedSize < 1)
-        {
-            return 1;
+                    final double changeCodeBranchCoverage =
+                        calculateChangeCoveragePercentage(coverage, "branch",
+                                                          NewCodeCoverage::getCoveredChangedBranchesCount,
+                                                          NewCodeCoverage::getTotalChangedBranchesCount);
+
+                    final double changeCodeLineCoverage =
+                        calculateChangeCoveragePercentage(coverage, "line",
+                                                          NewCodeCoverage::getCoveredChangedLinesCount,
+                                                          NewCodeCoverage::getTotalChangedLinesCount);
+                    if (changeCodeBranchCoverage < 92d)
+                    {
+                        final String message = "92% requirement for test coverage on changed branches not met.";
+                        getLog().error(message);
+                        throw new MojoFailureException(message);
+                    }
+                    if (changeCodeLineCoverage < 92d)
+                    {
+                        final String message = "92% requirement for test coverage on changed lines not met.";
+                        getLog().error(message);
+                        throw new MojoFailureException(message);
+                    }
+                }
+            }
         }
-        if (expectedSize < 3)
+        catch (final IOException | SAXException e)
         {
-            return expectedSize + 1;
-        }
-        else
-        {
-            return expectedSize < 1073741824 ? (int) ((float) expectedSize / 0.75F + 1.0F) : 2147483647;
+            throw new RuntimeException(e);
         }
     }
 }

@@ -3,6 +3,8 @@
  */
 package com.cognitran.products.coverage.changes.jacoco;
 
+import static com.cognitran.products.coverage.changes.Utilities.capacity;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -38,7 +40,7 @@ public class JacocoReportParser extends DefaultHandler
     {
         this.newFiles = newFiles;
         this.changedLinesByFile = changedLinesByFile;
-        interestingPackages = new HashSet<>(CoverageDiffMojo.capacity(newFiles.size() + changedLinesByFile.size()));
+        interestingPackages = new HashSet<>(capacity(newFiles.size() + changedLinesByFile.size()));
         Stream.concat(newFiles.stream(), changedLinesByFile.keySet().stream())
             .map(n -> n.substring(0, n.lastIndexOf('/')))
             .forEach(interestingPackages::add);
@@ -62,7 +64,7 @@ public class JacocoReportParser extends DefaultHandler
     }
 
     @Override
-    public void endElement(String uri, String localName, String qName) throws SAXException
+    public void endElement(final String uri, final String localName, final String qName) throws SAXException
     {
         super.endElement(uri, localName, qName);
 
