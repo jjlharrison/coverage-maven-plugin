@@ -1,8 +1,7 @@
 /*
- *  Copyright (c) 2017 Cognitran Limited. All Rights Reserved.
+ * Copyright (c) 2019 Cognitran Limited. All Rights Reserved.
  */
-
-import static org.apache.commons.io.output.NullOutputStream.NULL_OUTPUT_STREAM;
+package com.cognitran.products.coverage.changes;import static org.apache.commons.io.output.NullOutputStream.NULL_OUTPUT_STREAM;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -44,8 +43,8 @@ import org.jetbrains.annotations.NotNull;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-import com.cognitran.products.coverage.changes.NewCodeCoverage;
 import com.cognitran.products.coverage.changes.diff.Changes;
+import com.cognitran.products.coverage.changes.jacoco.JacocoReportParser;
 
 /**
  * Goal which update minimum test coverage requirements based on current coverage.

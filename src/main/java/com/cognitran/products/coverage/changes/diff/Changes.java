@@ -1,3 +1,6 @@
+/*
+ * Copyright (c) 2019 Cognitran Limited. All Rights Reserved.
+ */
 package com.cognitran.products.coverage.changes.diff;
 
 import java.util.Map;

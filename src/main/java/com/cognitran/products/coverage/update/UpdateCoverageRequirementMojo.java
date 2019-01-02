@@ -1,8 +1,7 @@
 /*
- *  Copyright (c) 2017 Cognitran Limited. All Rights Reserved.
+ * Copyright (c) 2019 Cognitran Limited. All Rights Reserved.
  */
-
-import java.io.File;
+package com.cognitran.products.coverage.update;import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Cognitran Limited. All Rights Reserved.
+ */
+package com.cognitran.products.coverage.changes.jacoco;
+
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;

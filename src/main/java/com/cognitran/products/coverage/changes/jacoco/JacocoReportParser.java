@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2019 Cognitran Limited. All Rights Reserved.
+ */
+package com.cognitran.products.coverage.changes.jacoco;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -9,6 +14,7 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
+import com.cognitran.products.coverage.changes.CoverageDiffMojo;
 import com.cognitran.products.coverage.changes.NewCodeCoverage;
 
 public class JacocoReportParser extends DefaultHandler
