@@ -6,11 +6,10 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import org.xml.sax.Attributes;
-import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import com.cognitran.products.coverage.NewCodeCoverage;
+import com.cognitran.products.coverage.changes.NewCodeCoverage;
 
 public class JacocoReportParser extends DefaultHandler
 {

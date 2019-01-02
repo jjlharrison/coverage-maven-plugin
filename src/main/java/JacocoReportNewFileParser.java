@@ -2,7 +2,7 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import com.cognitran.products.coverage.NewFileCodeCoverage;
+import com.cognitran.products.coverage.changes.NewFileCodeCoverage;
 
 public class JacocoReportNewFileParser extends DefaultHandler
 {

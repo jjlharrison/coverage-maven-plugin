@@ -1,4 +1,4 @@
-package com.cognitran.products.coverage;
+package com.cognitran.products.coverage.changes;
 
 public class NewFileCodeCoverage extends FileNewCodeCoverage
 {

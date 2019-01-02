@@ -2,7 +2,8 @@
  *  Copyright (c) 2017 Cognitran Limited. All Rights Reserved.
  */
 
-import java.io.ByteArrayOutputStream;
+import static org.apache.commons.io.output.NullOutputStream.NULL_OUTPUT_STREAM;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -22,13 +23,12 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
+import org.eclipse.jgit.diff.RawTextComparator;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectReader;
-import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.patch.HunkHeader;
@@ -39,11 +39,13 @@ import org.eclipse.jgit.revwalk.filter.RevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.AbstractTreeIterator;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
+import org.eclipse.jgit.treewalk.FileTreeIterator;
 import org.jetbrains.annotations.NotNull;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-import com.cognitran.products.coverage.NewCodeCoverage;
+import com.cognitran.products.coverage.changes.NewCodeCoverage;
+import com.cognitran.products.coverage.changes.diff.Changes;
 
 /**
  * Goal which update minimum test coverage requirements based on current coverage.
@@ -64,7 +66,8 @@ public class CoverageDiffMojo extends AbstractMojo
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException
     {
-        try (Repository repository = getRepository(); Git git = new Git(repository); RevWalk walk = new RevWalk(repository))
+        final Changes changes;
+        try (Repository repository = getRepository(); RevWalk walk = new RevWalk(repository))
         {
             // if (repository.exactRef("refs/heads/testbranch") == null)
             // {
@@ -72,78 +75,29 @@ public class CoverageDiffMojo extends AbstractMojo
             // final Ref ref = git.branchCreate().setName("testbranch").setStartPoint("origin/testbranch").call();
             // // System.out.println("Created local testbranch with ref: " + ref);
             // }
+            changes = getChanges(repository, walk, getMergeBase(repository, "refs/heads/develop", Constants.HEAD));
+        }
+        catch (final IOException e)
+        {
+            throw new RuntimeException(e);
+        }
 
-            // the diff works on TreeIterators, we prepare two for the two branches
-            final AbstractTreeIterator oldTreeParser = prepareTreeParser(repository, walk, getMergeBase(repository, "refs/heads/master",
-                                                                                                        Constants.HEAD));
-            final AbstractTreeIterator newTreeParser = prepareTreeParser(repository, walk, Constants.HEAD);
+        changes.getNewFiles().forEach(f -> getLog().info("New file: " + f));
+        changes.getChangedLinesByFile().forEach((k, v) -> getLog().info("Changed file: " + k));
 
-            // then the procelain diff-command returns a list of diff entries
-            // final List<DiffEntry> diff = git.diff().setOldTree(oldTreeParser).setNewTree(newTreeParser).setContextLines(0).call();
-            final ByteArrayOutputStream out = new ByteArrayOutputStream();
-            final DiffFormatter formatter = new DiffFormatter(out);
-            formatter.setRepository(repository);
-            formatter.setContext(0);
-            final URI repositoryRootDirectoryUri = URI.create(repository.getDirectory().getPath()).resolve("");
-            final URI moduleRootDirectoryUri = URI.create(project.getBasedir().getPath());
-            final URI repositoryRelativeModuleDirectoryUri = repositoryRootDirectoryUri.relativize(moduleRootDirectoryUri);
-            final List<DiffEntry> diffEntries = formatter.scan(oldTreeParser, newTreeParser);
-            final HashMap<String, Set<Integer>> changedLinesByFile = new HashMap<>(capacity(diffEntries.size()));
-            final HashSet<String> newFiles = new HashSet<>(capacity(diffEntries.size()));
-            for (final DiffEntry entry : diffEntries)
-            {
-                final String filePath = entry.getNewPath();
-                if (filePath.startsWith(repositoryRelativeModuleDirectoryUri.toString()))
-                {
-                    for (final String compileSourceRoot : project.getCompileSourceRoots())
-                    {
-                        final URI sourceRootRelativeFileUri = repositoryRootDirectoryUri.relativize(URI.create(compileSourceRoot))
-                                                                  .relativize(URI.create(filePath));
-                        // TODO Check if file exists.
-                        if (entry.getChangeType() == DiffEntry.ChangeType.MODIFY)
-                        {
-                            final Set<Integer> changedLines = changedLinesByFile.computeIfAbsent(sourceRootRelativeFileUri.toString(),
-                                                                                                 k -> new TreeSet<>());
-                            // getLog().info("Entry: " + entry);
-                            final FileHeader header = formatter.toFileHeader(entry);
-                            // getLog().info("File: " + header.getNewPath());
-                            for (final HunkHeader hunk : header.getHunks())
-                            {
-                                for (final Edit edit : hunk.toEditList())
-                                {
-                                    final Edit.Type type = edit.getType();
-                                    if (type == Edit.Type.INSERT || type == Edit.Type.REPLACE)
-                                    {
-                                        IntStream.rangeClosed(edit.getBeginB() + 1, edit.getEndB()).forEachOrdered(changedLines::add);
-                                        // for (int i = edit.getBeginB(); i < edit.getEndB(); i++)
-                                        // {
-                                        // getLog().info("Line: " + (i + 1));
-                                        // }
-                                    }
-                                }
-                            }
-                        }
-                        else if (entry.getChangeType() == DiffEntry.ChangeType.ADD)
-                        {
-                            // getLog().info("New file: " + filePath);
-                            newFiles.add(filePath);
-                        }
-                    }
-                }
-                // getLog().info("Changed Lines: " + changedLinesByFile.toString());
-                // getLog().info("New Files: " + newFiles.toString());
-                // formatter.format(entry);
-                // getLog().info(new String(out.toByteArray()));
+        theRest(changes);
+    }
 
-                out.reset();
-            }
-
+    private void theRest(final Changes changes) throws MojoFailureException
+    {
+        try
+        {
             final File jacocoXmlReport = new File(project.getBuild().getDirectory(), "site/jacoco/jacoco.xml");
             if (jacocoXmlReport.isFile())
             {
                 try (final FileInputStream inputStream = new FileInputStream(jacocoXmlReport))
                 {
-                    final JacocoReportParser parser = new JacocoReportParser(newFiles, changedLinesByFile);
+                    final JacocoReportParser parser = new JacocoReportParser(changes.getNewFiles(), changes.getChangedLinesByFile());
                     Sax.parse(new InputSource(inputStream), parser, false);
                     parser.getCoverage().stream()
                         .filter(NewCodeCoverage::hasTestableChanges)
@@ -186,7 +140,62 @@ public class CoverageDiffMojo extends AbstractMojo
         {
             throw new RuntimeException(e);
         }
+    }
 
+    @NotNull
+    private Changes getChanges(final Repository repository, final RevWalk walk, final RevCommit from) throws IOException
+    {
+        /* TODO We may be able to speed up execution by caching the diff when run in the root module
+         * and then using the cache in child modules. */
+        final AbstractTreeIterator oldTreeParser = prepareTreeParser(repository, walk, from);
+        final AbstractTreeIterator newTreeParser = new FileTreeIterator(repository);
+
+        final DiffFormatter formatter = new DiffFormatter(NULL_OUTPUT_STREAM);
+        formatter.setDiffComparator(RawTextComparator.WS_IGNORE_ALL);
+        formatter.setRepository(repository);
+        formatter.setContext(0);
+        final URI repositoryRootDirectoryUri = URI.create(repository.getDirectory().getPath()).resolve("");
+        final URI moduleRootDirectoryUri = URI.create(project.getBasedir().getPath());
+        final URI repositoryRelativeModuleDirectoryUri = repositoryRootDirectoryUri.relativize(moduleRootDirectoryUri);
+        final List<DiffEntry> diffEntries = formatter.scan(oldTreeParser, newTreeParser);
+        final HashMap<String, Set<Integer>> changedLinesByFile = new HashMap<>(capacity(diffEntries.size()));
+        final HashSet<String> newFiles = new HashSet<>(capacity(diffEntries.size()));
+        final Changes changes = new Changes(changedLinesByFile, newFiles);
+        for (final DiffEntry entry : diffEntries)
+        {
+            final String filePath = entry.getNewPath();
+            if (filePath.startsWith(repositoryRelativeModuleDirectoryUri.toString()))
+            {
+                for (final String compileSourceRoot : project.getCompileSourceRoots())
+                {
+                    final URI sourceRootRelativeFileUri = repositoryRootDirectoryUri.relativize(URI.create(compileSourceRoot))
+                                                              .relativize(URI.create(filePath));
+                    if (entry.getChangeType() == DiffEntry.ChangeType.MODIFY)
+                    {
+                        final FileHeader header = formatter.toFileHeader(entry);
+                        for (final HunkHeader hunk : header.getHunks())
+                        {
+                            for (final Edit edit : hunk.toEditList())
+                            {
+                                final Edit.Type type = edit.getType();
+                                if (type == Edit.Type.INSERT || type == Edit.Type.REPLACE)
+                                {
+                                    final Set<Integer> changedLines =
+                                        changedLinesByFile.computeIfAbsent(sourceRootRelativeFileUri.toString(),
+                                                                           k -> new TreeSet<>());
+                                    IntStream.rangeClosed(edit.getBeginB() + 1, edit.getEndB()).forEachOrdered(changedLines::add);
+                                }
+                            }
+                        }
+                    }
+                    else if (entry.getChangeType() == DiffEntry.ChangeType.ADD)
+                    {
+                        newFiles.add(filePath);
+                    }
+                }
+            }
+        }
+        return changes;
     }
 
     private Repository getRepository() throws IOException
@@ -195,15 +204,6 @@ public class CoverageDiffMojo extends AbstractMojo
         return builder.readEnvironment()
                    .findGitDir(project.getBasedir())
                    .build();
-    }
-
-    private static AbstractTreeIterator prepareTreeParser(final Repository repository, final RevWalk walk, final String ref)
-        throws IOException
-    {
-        // from the commit we can build the tree which allows us to construct the TreeParser
-        final Ref head = repository.findRef(ref);
-        final RevCommit commit = walk.parseCommit(head.getObjectId());
-        return prepareTreeParser(repository, walk, commit);
     }
 
     @NotNull

@@ -1,4 +1,4 @@
-package com.cognitran.products.coverage;
+package com.cognitran.products.coverage.changes;
 
 import java.util.HashSet;
 import java.util.Set;

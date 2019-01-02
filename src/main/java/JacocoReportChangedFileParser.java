@@ -2,8 +2,8 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import com.cognitran.products.coverage.FileChangesCodeCoverage;
-import com.cognitran.products.coverage.LineCodeCoverage;
+import com.cognitran.products.coverage.changes.FileChangesCodeCoverage;
+import com.cognitran.products.coverage.changes.LineCodeCoverage;
 
 public class JacocoReportChangedFileParser extends DefaultHandler
 {
