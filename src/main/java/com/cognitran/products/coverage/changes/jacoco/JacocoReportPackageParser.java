@@ -13,20 +13,35 @@ import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import com.cognitran.products.coverage.changes.NewCodeCoverage;
+import com.cognitran.products.coverage.changes.ChangeCoverage;
 
+/**
+ * Parses the &lt;package&gt; element to extract the change coverage information for a package.
+ */
 public class JacocoReportPackageParser extends DefaultHandler
 {
+    /** The package name to extract coverage information for. */
     private final String packageName;
 
+    /** The new files to extract coverage information for. */
     private final Set<String> newFiles;
 
+    /** The lines to extract coverage information indexed by the name of the modified files. */
     private final Map<String, Set<Integer>> changedLinesByFile;
 
-    private final List<NewCodeCoverage> coverage;
+    /** The coverage information for the changes. */
+    private final List<ChangeCoverage> coverage;
 
+    /** The delegate parser to parse child elements. */
     private ContentHandler delegate;
 
+    /**
+     * Constructor.
+     *
+     * @param packageName the package name to extract coverage information for.
+     * @param newFiles the new files to extract coverage information for.
+     * @param changedLinesByFile the lines to extract coverage information indexed by the name of the modified files.
+     */
     public JacocoReportPackageParser(final String packageName,
                                      final Set<String> newFiles,
                                      final Map<String, Set<Integer>> changedLinesByFile)
@@ -37,7 +52,12 @@ public class JacocoReportPackageParser extends DefaultHandler
         coverage = new ArrayList<>(newFiles.size() + changedLinesByFile.size());
     }
 
-    public List<NewCodeCoverage> getCoverage()
+    /**
+     * Returns the coverage information for the changes.
+     *
+     * @return the coverage information for the changes.
+     */
+    public List<ChangeCoverage> getCoverage()
     {
         return coverage;
     }
@@ -51,21 +71,17 @@ public class JacocoReportPackageParser extends DefaultHandler
         }
         else if ("sourcefile".equals(qName))
         {
-            final String name = packageName + '/' + attributes.getValue("name");
-            if (newFiles.contains(name))
+            final String filePath = packageName + '/' + attributes.getValue("name");
+            if (newFiles.contains(filePath))
             {
-                final JacocoReportNewFileParser newFileParser = new JacocoReportNewFileParser();
-                // TODO filePath should be constructor arg.
-                newFileParser.getCoverage().setFilePath(name);
+                final JacocoReportNewFileParser newFileParser = new JacocoReportNewFileParser(filePath);
                 coverage.add(newFileParser.getCoverage());
                 this.delegate = newFileParser;
             }
-            else if (changedLinesByFile.containsKey(name))
+            else if (changedLinesByFile.containsKey(filePath))
             {
-                final JacocoReportChangedFileParser changedFileParser = new JacocoReportChangedFileParser();
-                // TODO filePath and changed lines should be constructor args.
-                changedFileParser.getCoverage().setFilePath(name);
-                changedFileParser.getCoverage().setChangedLines(changedLinesByFile.get(name));
+                final JacocoReportModifiedSourcefileParser changedFileParser
+                    = new JacocoReportModifiedSourcefileParser(filePath, changedLinesByFile.get(filePath));
                 coverage.add(changedFileParser.getCoverage());
                 this.delegate = changedFileParser;
             }

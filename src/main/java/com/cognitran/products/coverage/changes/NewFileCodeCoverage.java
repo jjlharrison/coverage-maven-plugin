@@ -3,10 +3,23 @@
  */
 package com.cognitran.products.coverage.changes;
 
-public class NewFileCodeCoverage extends FileNewCodeCoverage
+/**
+ * Coverage information for a new file.
+ */
+public class NewFileCodeCoverage extends FileChangeCoverage
 {
+    /**
+     * Constructor.
+     *
+     * @param filePath the path of the new file.
+     */
+    public NewFileCodeCoverage(final String filePath)
+    {
+        super(filePath);
+    }
+
     @Override
-    protected String describeChangeType()
+    protected String summariseChangeType()
     {
         return "New file";
     }

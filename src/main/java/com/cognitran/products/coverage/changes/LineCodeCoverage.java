@@ -7,10 +7,23 @@ import java.util.Objects;
 
 import javax.annotation.Nonnull;
 
-public class LineCodeCoverage extends NewCodeCoverage implements Comparable<LineCodeCoverage>
+/**
+ * Coverage information about a changed line.
+ */
+public class LineCodeCoverage extends ChangeCoverage implements Comparable<LineCodeCoverage>
 {
+    /** The number of the changed line. */
     private final int lineNumber;
 
+    /**
+     * Constructor.
+     *
+     * @param lineNumber the number of the changed line.
+     * @param coveredLinesCount the count of changed lines that are covered by tests.
+     * @param missedLinesCount the count of changed lines that are not covered by tests.
+     * @param coveredBranchesCount the count of changed branches that are covered by tests.
+     * @param missedBranchesCount the count of changed branches that are not covered by tests.
+     */
     public LineCodeCoverage(final int lineNumber, final int coveredLinesCount, final int missedLinesCount, final int coveredBranchesCount,
                             final int missedBranchesCount)
     {
@@ -52,7 +65,7 @@ public class LineCodeCoverage extends NewCodeCoverage implements Comparable<Line
     }
 
     @Override
-    protected String describeChangeType()
+    protected String summariseChangeType()
     {
         return "Line change";
     }
@@ -65,6 +78,11 @@ public class LineCodeCoverage extends NewCodeCoverage implements Comparable<Line
                (getCoveredChangedBranchesCount() + "/" + getTotalChangedBranchesCount() + " new branches covered.");
     }
 
+    /**
+     * Returns the number of the changed line.
+     *
+     * @return the number of the changed line.
+     */
     public int getLineNumber()
     {
         return lineNumber;
