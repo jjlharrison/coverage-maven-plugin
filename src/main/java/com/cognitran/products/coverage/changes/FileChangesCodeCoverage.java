@@ -8,6 +8,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nonnull;
+
 public class FileChangesCodeCoverage extends FileNewCodeCoverage
 {
     private Set<Integer> changedLines = new HashSet<>();
@@ -32,12 +34,14 @@ public class FileChangesCodeCoverage extends FileNewCodeCoverage
     @Override
     public String describe()
     {
-        final String lines = getCoveredChangedLinesCount() + "/" + getTotalChangedLinesCount() + " new lines covered";
-        final String branches = getTotalChangedBranchesCount() > 0
-                                    ? (", " + getCoveredChangedBranchesCount() + "/" + getTotalChangedBranchesCount() + " new branches covered")
-                                    : "";
-        return "Changed file " + getFilePath() + ": " + lines + branches + ":\n" +
+        return summariseChangeAndCoverage() + ":\n" +
                coverage.stream().map(LineCodeCoverage::describe).map(s -> "    " + s).collect(Collectors.joining("\n"));
+    }
+
+    @Nonnull
+    protected String describeChangeType()
+    {
+        return "Changed file";
     }
 
     @Override

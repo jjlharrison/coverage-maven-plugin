@@ -49,7 +49,7 @@ public class JacocoReportPackageParser extends DefaultHandler
         {
             delegate.startElement(uri, localName, qName, attributes);
         }
-        else if (qName.equals("sourcefile"))
+        else if ("sourcefile".equals(qName))
         {
             final String name = packageName + '/' + attributes.getValue("name");
             if (newFiles.contains(name))
@@ -78,7 +78,7 @@ public class JacocoReportPackageParser extends DefaultHandler
     {
         super.endElement(uri, localName, qName);
 
-        if (qName.equals("sourcefile"))
+        if ("sourcefile".equals(qName))
         {
             delegate = null;
         }

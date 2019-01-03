@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.cognitran.products</groupId>
         <artifactId>products-parent</artifactId>
-        <version>14.1.0</version>
+        <version>15.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>coverage-maven-plugin</artifactId>
     <packaging>maven-plugin</packaging>
@@ -16,6 +16,11 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.cognitran.products</groupId>
+            <artifactId>products-utilities</artifactId>
+            <version>15.0.0-SNAPSHOT</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-plugin-api</artifactId>

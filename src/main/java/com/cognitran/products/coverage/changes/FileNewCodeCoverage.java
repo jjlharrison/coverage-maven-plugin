@@ -3,6 +3,8 @@
  */
 package com.cognitran.products.coverage.changes;
 
+import javax.annotation.Nonnull;
+
 public abstract class FileNewCodeCoverage extends NewCodeCoverage
 {
     private String filePath;
@@ -15,5 +17,12 @@ public abstract class FileNewCodeCoverage extends NewCodeCoverage
     public void setFilePath(final String filePath)
     {
         this.filePath = filePath;
+    }
+
+    @Nonnull
+    protected String summariseChangeAndCoverage()
+    {
+        final String branches = getTotalChangedBranchesCount() > 0 ? (", " + summariseBranchCoverage()) : "";
+        return describeChangeType() + " " + getFilePath() + ": " + summariseLineCoverage() + branches;
     }
 }

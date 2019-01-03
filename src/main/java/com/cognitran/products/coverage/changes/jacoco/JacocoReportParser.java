@@ -16,7 +16,6 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import com.cognitran.products.coverage.changes.CoverageDiffMojo;
 import com.cognitran.products.coverage.changes.NewCodeCoverage;
 
 public class JacocoReportParser extends DefaultHandler
@@ -53,7 +52,7 @@ public class JacocoReportParser extends DefaultHandler
         {
             delegate.startElement(uri, localName, qName, attributes);
         }
-        if (qName.equals("package"))
+        if ("package".equals(qName))
         {
             final String packageName = attributes.getValue("name");
             if (interestingPackages.contains(packageName))

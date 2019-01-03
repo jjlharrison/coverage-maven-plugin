@@ -20,6 +20,8 @@ import java.util.TreeSet;
 import java.util.function.ToIntFunction;
 import java.util.stream.IntStream;
 
+import javax.annotation.Nonnull;
+
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -43,24 +45,22 @@ import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.AbstractTreeIterator;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.FileTreeIterator;
-import org.jetbrains.annotations.NotNull;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-import com.cognitran.products.coverage.changes.diff.Changes;
+import com.cognitran.products.coverage.changes.diff.ProjectChanges;
 import com.cognitran.products.coverage.changes.jacoco.JacocoReportParser;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
- * Goal which update minimum test coverage requirements based on current coverage.
+ * Goal which calculates coverage levels for changed Java code and enforces minimum requirements.
  */
-@Mojo(name = "coverage-diff",
-      threadSafe = true,
-      defaultPhase = LifecyclePhase.POST_SITE)
+@Mojo(name = "coverage-diff", threadSafe = true, defaultPhase = LifecyclePhase.POST_SITE)
 public class CoverageDiffMojo extends AbstractMojo
 {
     /** The JaCoCo XML report file. */
     @Parameter(defaultValue = "${project.reporting.outputDirectory}/jacoco/jacoco.xml", required = true)
-    private File jacocoHtmlReport;
+    private File jacocoXmlReport;
 
     /** The Maven project. */
     @Parameter(defaultValue = "${project}", readonly = true)
@@ -69,28 +69,31 @@ public class CoverageDiffMojo extends AbstractMojo
     @Override
     public void execute() throws MojoFailureException
     {
-        final Changes changes;
-        try (Repository repository = getRepository(); RevWalk walk = new RevWalk(repository))
+        final ProjectChanges changes;
+        try (Repository repository = buildRepository())
         {
-            // if (repository.exactRef("refs/heads/testbranch") == null)
-            // {
-            // // first we need to ensure that the remote branch is visible locally
-            // final Ref ref = git.branchCreate().setName("testbranch").setStartPoint("origin/testbranch").call();
-            // // System.out.println("Created local testbranch with ref: " + ref);
-            // }
-            changes = getChanges(repository, walk, getMergeBase(repository, "refs/heads/develop", Constants.HEAD));
+            changes = getChanges(repository, getMergeBase(repository, "refs/heads/develop", Constants.HEAD));
         }
         catch (final IOException e)
         {
             throw new RuntimeException(e);
         }
 
-        changes.getNewFiles().forEach(f -> getLog().info("New file: " + f));
-        changes.getChangedLinesByFile().forEach((k, v) -> getLog().info("Changed file: " + k));
+        //        changes.getNewFiles().forEach(f -> getLog().info("New file: " + f));
+        //        changes.getChangedLinesByFile().forEach((k, v) -> getLog().info("Changed file: " + k));
 
         theRest(changes);
     }
 
+    /**
+     * Calculate the coverage percentage.
+     *
+     * @param coverage the coverage information.
+     * @param type the coverage type.
+     * @param coveredExtractor the function to extract covered counts from the coverage information.
+     * @param totalExtractor the function to extract total change counts from the coverage information.
+     * @return the coverage percentage.
+     */
     private double calculateChangeCoveragePercentage(final List<NewCodeCoverage> coverage,
                                                      final String type,
                                                      final ToIntFunction<NewCodeCoverage> coveredExtractor,
@@ -105,12 +108,20 @@ public class CoverageDiffMojo extends AbstractMojo
         return changeCodeBranchCoverage;
     }
 
-    @NotNull
-    private Changes getChanges(final Repository repository, final RevWalk walk, final RevCommit from) throws IOException
+    /**
+     * Returns the project change information.
+     *
+     * @param repository the repository.
+     * @param from the commit to compare with.
+     * @return the project changes.
+     * @throws IOException if an I/O error occurs.
+     */
+    @Nonnull
+    private ProjectChanges getChanges(final Repository repository, final RevCommit from) throws IOException
     {
         /* TODO We may be able to speed up execution by caching the diff when run in the root module
          * and then using the cache in child modules. */
-        final AbstractTreeIterator oldTreeParser = prepareTreeParser(repository, walk, from);
+        final AbstractTreeIterator oldTreeParser = prepareTreeParser(repository, from);
         final AbstractTreeIterator newTreeParser = new FileTreeIterator(repository);
 
         final DiffFormatter formatter = new DiffFormatter(NULL_OUTPUT_STREAM);
@@ -123,7 +134,7 @@ public class CoverageDiffMojo extends AbstractMojo
         final List<DiffEntry> diffEntries = formatter.scan(oldTreeParser, newTreeParser);
         final Map<String, Set<Integer>> changedLinesByFile = new HashMap<>(capacity(diffEntries.size()));
         final Set<String> newFiles = new HashSet<>(capacity(diffEntries.size()));
-        final Changes changes = new Changes(changedLinesByFile, newFiles);
+        final ProjectChanges changes = new ProjectChanges(changedLinesByFile, newFiles);
         for (final DiffEntry entry : diffEntries)
         {
             final String filePath = entry.getNewPath();
@@ -161,9 +172,18 @@ public class CoverageDiffMojo extends AbstractMojo
         return changes;
     }
 
+    /**
+     * Finds a common ancestor between the source ref and the target ref.
+     *
+     * @param repository the repository.
+     * @param source the source ref.
+     * @param target the target ref.
+     * @return the merge base.
+     * @throws IOException if an I/O error occurs.
+     */
     private RevCommit getMergeBase(final Repository repository, final String source, final String target) throws IOException
     {
-        try (final RevWalk walk = new RevWalk(repository))
+        try (RevWalk walk = new RevWalk(repository))
         {
             final RevCommit revA = walk.parseCommit(repository.findRef(target).getObjectId());
             final RevCommit revB = walk.parseCommit(repository.findRef(source).getObjectId());
@@ -176,46 +196,63 @@ public class CoverageDiffMojo extends AbstractMojo
         }
     }
 
-    private Repository getRepository() throws IOException
+    /**
+     * Builds the repository.
+     *
+     * @return the repository.
+     * @throws IOException if an I/O error occurs.
+     */
+    @SuppressFBWarnings(value = "BC_UNCONFIRMED_CAST_OF_RETURN_VALUE", justification = "¯\\_(ツ)_/¯")
+    private Repository buildRepository() throws IOException
     {
-        final FileRepositoryBuilder builder = new FileRepositoryBuilder();
-        return builder.readEnvironment()
+        return new FileRepositoryBuilder()
+                   .readEnvironment()
                    .findGitDir(project.getBasedir())
                    .build();
     }
 
-    @NotNull
-    private static AbstractTreeIterator prepareTreeParser(final Repository repository, final RevWalk walk, final RevCommit commit)
+    /**
+     * Prepares a tree iterator/parser for the given commit.
+     *
+     * @param repository the repository.
+     * @param commit the commit.
+     * @return the tree iterator.
+     * @throws IOException if an I/O error occurs.
+     */
+    @Nonnull
+    private static AbstractTreeIterator prepareTreeParser(final Repository repository, final RevCommit commit)
         throws IOException
     {
-        final RevTree tree = walk.parseTree(commit.getTree().getId());
-
-        final CanonicalTreeParser treeParser = new CanonicalTreeParser();
-        try (ObjectReader reader = repository.newObjectReader())
+        try (RevWalk walk = new RevWalk(repository))
         {
-            treeParser.reset(reader, tree.getId());
+            final RevTree tree = walk.parseTree(commit.getTree().getId());
+
+            final CanonicalTreeParser treeParser = new CanonicalTreeParser();
+            try (ObjectReader reader = repository.newObjectReader())
+            {
+                treeParser.reset(reader, tree.getId());
+            }
+
+            walk.dispose();
+
+            return treeParser;
         }
-
-        walk.dispose();
-
-        return treeParser;
     }
 
-    private void theRest(final Changes changes) throws MojoFailureException
+    private void theRest(final ProjectChanges changes) throws MojoFailureException
     {
         try
         {
-            final File jacocoXmlReport = new File(project.getBuild().getDirectory(), "site/jacoco/jacoco.xml");
             if (jacocoXmlReport.isFile())
             {
-                try (final FileInputStream inputStream = new FileInputStream(jacocoXmlReport))
+                try (FileInputStream inputStream = new FileInputStream(jacocoXmlReport))
                 {
                     final JacocoReportParser parser = new JacocoReportParser(changes.getNewFiles(), changes.getChangedLinesByFile());
                     Utilities.parse(new InputSource(inputStream), parser, false);
                     final List<NewCodeCoverage> coverage = parser.getCoverage();
                     coverage.stream()
                         .filter(NewCodeCoverage::hasTestableChanges)
-                        .forEach(c -> getLog().info(c.toString()));
+                        .forEach(c -> c.describe(getLog()));
 
                     final double changeCodeBranchCoverage =
                         calculateChangeCoveragePercentage(coverage, "branch",

@@ -24,16 +24,22 @@ public class JacocoReportChangedFileParser extends DefaultHandler
     {
         super.startElement(uri, localName, qName, attributes);
 
-        if (qName.equals("line") && coverage.getChangedLines().contains(Integer.valueOf(attributes.getValue("nr"))))
+        if ("line".equals(qName) && coverage.getChangedLines().contains(Integer.valueOf(attributes.getValue("nr"))))
         {
             //<line nr="45" mi="0" ci="5" mb="0" cb="0"/>
             coverage.getCoverage().add(
-                new LineCodeCoverage(Integer.parseInt(attributes.getValue("nr")),
-                                     Integer.parseInt(attributes.getValue("ci")) > 0 ? 1 : 0,
-                                     Integer.parseInt(attributes.getValue("mi")) > 0 ? 1 : 0,
-                                     Integer.parseInt(attributes.getValue("cb")),
-                                     Integer.parseInt(attributes.getValue("mb"))
+                new LineCodeCoverage(parseIntAttribute(attributes, "nr"),
+                                     parseIntAttribute(attributes, "ci") > 0 ? 1 : 0,
+                                     parseIntAttribute(attributes, "mi") > 0 ? 1 : 0,
+                                     parseIntAttribute(attributes, "cb"),
+                                     parseIntAttribute(attributes, "mb")
                 ));
         }
+    }
+
+    private int parseIntAttribute(final Attributes attributes, final String nr)
+    {
+        final String value = attributes.getValue(nr);
+        return value == null ? 0 : Integer.parseInt(value);
     }
 }
