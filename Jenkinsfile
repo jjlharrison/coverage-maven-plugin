@@ -18,7 +18,7 @@ timeout(time: 3, unit: 'HOURS') {
     def mavenSettings = '6477bc0c-502b-4247-ac2e-dd8f0e62d61d'
 
     /* Name of centrally configured Maven installation in Jenkins. */
-    def mavenToolName = 'Maven 3.5.2'
+    def mavenToolName = 'Maven 3.5.3'
 
     /* Name of centrally configured JDK installation in Jenkins. */
     def jdkToolName = 'Java 8 JDK (Latest)'
@@ -82,14 +82,16 @@ timeout(time: 3, unit: 'HOURS') {
                                 "-Dorg.slf4j.simpleLogger.log.org.apache.maven.plugins.help=INFO") {
                     version = sh(script: "mvn ${mavenOptions} help:evaluate -Dexpression=project.version | grep -v '^\\[' | grep -v 'JenkinsMavenEventSpy' | tail -1",
                             returnStdout: true).trim()
-                }
 
-                echo "Branch Name: ${branch}\nVersion: ${version}"
+                    echo "Branch Name: ${branch}\nVersion: ${version}"
 
-                if (releaseBuild && version.endsWith('-SNAPSHOT')) {
-                    error('Release builds must not have a SNAPSHOT version. If this is not a release build, please ensure that the branch name starts with "wip/", "feature/", "release/", "hotfix/", or "develop". POM version is "' + version + '".')
-                } else if (!releaseBuild && !version.endsWith('-SNAPSHOT')) {
-                    error('Non-release builds must have a SNAPSHOT version. Please make sure that you have based your branch on a "Work in Progress" ("develop", "release/*", "hotfix/*", or "wip/*") branch and that the POM version ends with "-SNAPSHOT". POM version is "' + version + '".')
+                    if (releaseBuild && version.endsWith('-SNAPSHOT')) {
+                        sh(script: "mvn ${mavenOptions} help:evaluate -Dexpression=project.version")
+                        error('Release builds must not have a SNAPSHOT version. If this is not a release build, please ensure that the branch name starts with "wip/", "feature/", "release/", "hotfix/", or "develop". POM version is "' + version + '".')
+                    } else if (!releaseBuild && !version.endsWith('-SNAPSHOT')) {
+                        sh(script: "mvn ${mavenOptions} help:evaluate -Dexpression=project.version")
+                        error('Non-release builds must have a SNAPSHOT version. Please make sure that you have based your branch on a "Work in Progress" ("develop", "release/*", "hotfix/*", or "wip/*") branch and that the POM version ends with "-SNAPSHOT". POM version is "' + version + '".')
+                    }
                 }
             }
 
