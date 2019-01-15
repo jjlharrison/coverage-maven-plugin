@@ -59,7 +59,7 @@ public class LineCodeCoverage extends ChangeCoverage implements Comparable<LineC
     }
 
     @Override
-    public String describe()
+    public String describe(final boolean includeCoveredDetail)
     {
         return summariseChangeAndCoverage();
     }
@@ -73,9 +73,9 @@ public class LineCodeCoverage extends ChangeCoverage implements Comparable<LineC
     @Override
     protected String summariseChangeAndCoverage()
     {
-        return "Line " + getLineNumber() + ": line " +
-               (getCoveredChangedLinesCount() == 1 ? "covered" : "not covered") + ", " +
-               (getCoveredChangedBranchesCount() + "/" + getTotalChangedBranchesCount() + " new branches covered.");
+        final int branchesCount = getTotalChangedBranchesCount();
+        return "Line " + getLineNumber() + ": line " + (getCoveredChangedLinesCount() == 1 ? "covered" : "not covered") +
+               (branchesCount > 0 ? ", " + (getCoveredChangedBranchesCount() + "/" + branchesCount + " branches covered.") : "");
     }
 
     /**

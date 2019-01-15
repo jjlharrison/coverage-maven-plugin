@@ -3,6 +3,7 @@
  */
 package com.cognitran.products.coverage.changes.diff;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -47,5 +48,23 @@ public class ProjectChanges
     public Set<String> getNewFiles()
     {
         return newFiles;
+    }
+
+    /**
+     * Whether there are any changes.
+     *
+     * @return whether there are any changes.
+     */
+    public boolean hasChanges()
+    {
+        return !newFiles.isEmpty() || !changedLinesByFile.isEmpty();
+    }
+
+    @Override
+    public String toString()
+    {
+        return getNewFiles().size() + " new files, "
+               + changedLinesByFile.size() + " modified files ("
+               + changedLinesByFile.values().stream().mapToInt(Collection::size).sum() + " lines changed)";
     }
 }

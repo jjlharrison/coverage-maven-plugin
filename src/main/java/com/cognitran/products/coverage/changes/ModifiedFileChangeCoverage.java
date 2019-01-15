@@ -63,10 +63,14 @@ public class ModifiedFileChangeCoverage extends FileChangeCoverage
     }
 
     @Override
-    public String describe()
+    public String describe(final boolean includeCoveredDetail)
     {
         return summariseChangeAndCoverage() + ":\n" +
-               coverage.stream().map(LineCodeCoverage::describe).map(s -> "    " + s).collect(Collectors.joining("\n"));
+               coverage.stream()
+                   .filter(c -> includeCoveredDetail || !c.isCoverageComplete())
+                   .map(c -> c.describe(includeCoveredDetail))
+                   .map(s -> "    " + s)
+                   .collect(Collectors.joining("\n"));
     }
 
     @Nonnull

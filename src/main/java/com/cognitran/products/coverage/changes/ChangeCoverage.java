@@ -54,9 +54,10 @@ public abstract class ChangeCoverage
     /**
      * Describes the coverage information.
      *
+     * @param includeCoveredDetail whether to include detail about covered changes (in addition to detail about uncovered changes).
      * @return the description of the coverage.
      */
-    public abstract String describe();
+    public abstract String describe(boolean includeCoveredDetail);
 
     /**
      * Writes the description to the given log.
@@ -66,10 +67,11 @@ public abstract class ChangeCoverage
     public void describe(final Log log)
     {
         final boolean coverageComplete = isCoverageComplete();
-        if (!coverageComplete || log.isDebugEnabled())
+        final boolean includeCoveredDetail = log.isDebugEnabled();
+        if (!coverageComplete || includeCoveredDetail)
         {
             final Consumer<CharSequence> logger = coverageComplete ? log::debug : log::warn;
-            logger.accept(describe());
+            logger.accept(describe(includeCoveredDetail));
         }
     }
 
@@ -186,7 +188,7 @@ public abstract class ChangeCoverage
     @Override
     public final String toString()
     {
-        return describe();
+        return describe(true);
     }
 
     /**
@@ -215,7 +217,7 @@ public abstract class ChangeCoverage
     @Nonnull
     protected String summariseBranchCoverage()
     {
-        return getCoveredChangedBranchesCount() + "/" + getTotalChangedBranchesCount() + " new branches covered";
+        return getCoveredChangedBranchesCount() + "/" + getTotalChangedBranchesCount() + " changed branches covered";
     }
 
     /**
@@ -233,6 +235,6 @@ public abstract class ChangeCoverage
     @Nonnull
     protected String summariseLineCoverage()
     {
-        return getCoveredChangedLinesCount() + "/" + getTotalChangedLinesCount() + " new lines covered";
+        return getCoveredChangedLinesCount() + "/" + getTotalChangedLinesCount() + " changed lines covered";
     }
 }

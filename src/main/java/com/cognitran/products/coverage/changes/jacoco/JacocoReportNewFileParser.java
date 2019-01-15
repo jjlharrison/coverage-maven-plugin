@@ -30,8 +30,6 @@ public class JacocoReportNewFileParser extends DefaultHandler
     @Override
     public void startElement(final String uri, final String localName, final String qName, final Attributes attributes) throws SAXException
     {
-        super.startElement(uri, localName, qName, attributes);
-
         if ("counter".equals(qName))
         {
             final String type = attributes.getValue("type");

@@ -25,7 +25,7 @@ public class NewFileCodeCoverage extends FileChangeCoverage
     }
 
     @Override
-    public String describe()
+    public String describe(final boolean includeCoveredDetail)
     {
         return summariseChangeAndCoverage();
     }

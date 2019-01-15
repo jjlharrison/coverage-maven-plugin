@@ -86,17 +86,18 @@ public class JacocoReportPackageParser extends DefaultHandler
                 this.delegate = changedFileParser;
             }
         }
-        super.startElement(uri, localName, qName, attributes);
     }
 
     @Override
     public void endElement(final String uri, final String localName, final String qName) throws SAXException
     {
-        super.endElement(uri, localName, qName);
-
         if ("sourcefile".equals(qName))
         {
             delegate = null;
+        }
+        else if (delegate != null)
+        {
+            delegate.endElement(uri, localName, qName);
         }
     }
 }

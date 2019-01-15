@@ -86,12 +86,17 @@ public class JacocoReportParser extends DefaultHandler
     @Override
     public void endElement(final String uri, final String localName, final String qName) throws SAXException
     {
-        super.endElement(uri, localName, qName);
-
-        if (qName.equals("package") && delegate != null)
+        if (delegate != null)
         {
-            coverage.addAll(delegate.getCoverage());
-            delegate = null;
+            if ("package".equals(qName))
+            {
+                coverage.addAll(delegate.getCoverage());
+                delegate = null;
+            }
+            else
+            {
+                delegate.endElement(uri, localName, qName);
+            }
         }
     }
 }
