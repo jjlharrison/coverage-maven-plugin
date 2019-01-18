@@ -269,7 +269,7 @@ public class ChangeCoverageMojo extends AbstractMojo
         {
             final URI repositoryRootDirectoryUri = addTrailingSlash(URI.create(repository.getDirectory().getPath()).resolve(""));
             final URI moduleRootDirectoryUri = addTrailingSlash(URI.create(project.getBasedir().getPath()));
-            final URI repositoryRelativeModuleDirectoryUri = repositoryRootDirectoryUri.relativize(moduleRootDirectoryUri);
+            final URI repositoryRelativeModuleUri = repositoryRootDirectoryUri.relativize(moduleRootDirectoryUri);
             final RevCommit compareCommit = getCommitForRef(repository, "refs/heads/" + compareBranch);
             getLog().info("Comparing current directory with " + compareBranch + " (" + compareCommit.getName() + ").");
             getLog().info("Run \"git diff " + compareBranch + "...HEAD\" to see diff.");
@@ -295,33 +295,37 @@ public class ChangeCoverageMojo extends AbstractMojo
             for (final DiffEntry entry : diffEntries)
             {
                 final String filePath = entry.getNewPath();
-                if (filePath.startsWith(repositoryRelativeModuleDirectoryUri.toString()))
+                if (filePath.startsWith(repositoryRelativeModuleUri.toString()))
                 {
                     for (final String compileSourceRoot : project.getCompileSourceRoots())
                     {
-                        final URI sourceRootRelativeFileUri = repositoryRootDirectoryUri.relativize(URI.create(compileSourceRoot))
-                                                                  .relativize(URI.create(filePath));
-                        if (entry.getChangeType() == DiffEntry.ChangeType.MODIFY)
+                        final URI repositoryRelativeSourceRootUri = repositoryRootDirectoryUri.relativize(URI.create(compileSourceRoot));
+
+                        if (filePath.startsWith(repositoryRelativeSourceRootUri.toString()))
                         {
-                            final FileHeader header = formatter.toFileHeader(entry);
-                            for (final HunkHeader hunk : header.getHunks())
+                            final URI sourceRootRelativeFileUri = repositoryRelativeSourceRootUri.relativize(URI.create(filePath));
+                            if (entry.getChangeType() == DiffEntry.ChangeType.MODIFY)
                             {
-                                for (final Edit edit : hunk.toEditList())
+                                final FileHeader header = formatter.toFileHeader(entry);
+                                for (final HunkHeader hunk : header.getHunks())
                                 {
-                                    final Edit.Type type = edit.getType();
-                                    if (type == Edit.Type.INSERT || type == Edit.Type.REPLACE)
+                                    for (final Edit edit : hunk.toEditList())
                                     {
-                                        final Set<Integer> changedLines =
-                                            changedLinesByFile.computeIfAbsent(sourceRootRelativeFileUri.toString(),
-                                                                               k -> new TreeSet<>());
-                                        IntStream.rangeClosed(edit.getBeginB() + 1, edit.getEndB()).forEachOrdered(changedLines::add);
+                                        final Edit.Type type = edit.getType();
+                                        if (type == Edit.Type.INSERT || type == Edit.Type.REPLACE)
+                                        {
+                                            final Set<Integer> changedLines =
+                                                changedLinesByFile.computeIfAbsent(sourceRootRelativeFileUri.toString(),
+                                                                                   k -> new TreeSet<>());
+                                            IntStream.rangeClosed(edit.getBeginB() + 1, edit.getEndB()).forEachOrdered(changedLines::add);
+                                        }
                                     }
                                 }
                             }
-                        }
-                        else if (entry.getChangeType() == DiffEntry.ChangeType.ADD)
-                        {
-                            newFiles.add(sourceRootRelativeFileUri.toString());
+                            else if (entry.getChangeType() == DiffEntry.ChangeType.ADD)
+                            {
+                                newFiles.add(sourceRootRelativeFileUri.toString());
+                            }
                         }
                     }
                 }
