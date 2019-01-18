@@ -3,24 +3,12 @@
  */
 package com.cognitran.products.coverage.changes;
 
-import static com.cognitran.products.coverage.changes.Utilities.capacity;
-import static org.apache.commons.io.output.NullOutputStream.NULL_OUTPUT_STREAM;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.URI;
 import java.text.DecimalFormat;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.function.ToIntFunction;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -32,25 +20,8 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.eclipse.jgit.diff.DiffEntry;
-import org.eclipse.jgit.diff.DiffFormatter;
-import org.eclipse.jgit.diff.Edit;
-import org.eclipse.jgit.diff.RawTextComparator;
-import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.patch.FileHeader;
-import org.eclipse.jgit.patch.HunkHeader;
-import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevTree;
-import org.eclipse.jgit.revwalk.RevWalk;
-import org.eclipse.jgit.revwalk.filter.RevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
-import org.eclipse.jgit.treewalk.AbstractTreeIterator;
-import org.eclipse.jgit.treewalk.CanonicalTreeParser;
-import org.eclipse.jgit.treewalk.FileTreeIterator;
-import org.eclipse.jgit.treewalk.filter.OrTreeFilter;
-import org.eclipse.jgit.treewalk.filter.PathFilter;
-import org.eclipse.jgit.treewalk.filter.TreeFilter;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
@@ -135,17 +106,6 @@ public class ChangeCoverageMojo extends AbstractMojo
                 getLog().info("No new code found.");
             }
         }
-    }
-
-    /**
-     * Appends a trailing slash to the URI if it doesn't already have one.
-     *
-     * @param uri the URI.
-     * @return the URI with the trailing slash.
-     */
-    private static URI addTrailingSlash(final URI uri)
-    {
-        return uri.toString().endsWith("/") ? uri : URI.create(uri.toString() + "/");
     }
 
     /**
@@ -264,145 +224,10 @@ public class ChangeCoverageMojo extends AbstractMojo
     @Nonnull
     private ProjectChanges getChanges(final Repository repository) throws IOException
     {
-        final List<String> compileSourceRoots = project.getCompileSourceRoots();
-        if (!compileSourceRoots.isEmpty())
-        {
-            final URI repositoryRootDirectoryUri = addTrailingSlash(URI.create(repository.getDirectory().getPath()).resolve(""));
-            final URI moduleRootDirectoryUri = addTrailingSlash(URI.create(project.getBasedir().getPath()));
-            final URI repositoryRelativeModuleUri = repositoryRootDirectoryUri.relativize(moduleRootDirectoryUri);
-            final RevCommit compareCommit = getCommitForRef(repository, "refs/heads/" + compareBranch);
-            getLog().info("Comparing current directory with " + compareBranch + " (" + compareCommit.getName() + ").");
-            getLog().info("Run \"git diff " + compareBranch + "...HEAD\" to see diff.");
-            final AbstractTreeIterator oldTreeParser = new FileTreeIterator(repository);
-            final AbstractTreeIterator newTreeParser = prepareTreeParser(repository,
-                                                                         getMergeBase(repository, "HEAD", "refs/heads/" + compareBranch));
-            final DiffFormatter formatter = new DiffFormatter(NULL_OUTPUT_STREAM);
-            formatter.setDiffComparator(RawTextComparator.WS_IGNORE_ALL);
-            formatter.setRepository(repository);
-            formatter.setContext(0);
-
-            // Filter files not in source roots.
-            final List<TreeFilter> pathFilters = compileSourceRoots.stream()
-                                                     .map(s -> repositoryRootDirectoryUri.relativize(URI.create(s)).toString())
-                                                     .map(PathFilter::create)
-                                                     .collect(Collectors.toList());
-            formatter.setPathFilter(pathFilters.size() > 1 ? OrTreeFilter.create(pathFilters) : pathFilters.get(0));
-
-            final List<DiffEntry> diffEntries = formatter.scan(newTreeParser, oldTreeParser);
-            final Map<String, Set<Integer>> changedLinesByFile = new HashMap<>(capacity(diffEntries.size()));
-            final Set<String> newFiles = new HashSet<>(capacity(diffEntries.size()));
-            final ProjectChanges changes = new ProjectChanges(changedLinesByFile, newFiles);
-            for (final DiffEntry entry : diffEntries)
-            {
-                final String filePath = entry.getNewPath();
-                if (filePath.startsWith(repositoryRelativeModuleUri.toString()))
-                {
-                    for (final String compileSourceRoot : project.getCompileSourceRoots())
-                    {
-                        final URI repositoryRelativeSourceRootUri = repositoryRootDirectoryUri.relativize(URI.create(compileSourceRoot));
-
-                        if (filePath.startsWith(repositoryRelativeSourceRootUri.toString()))
-                        {
-                            final URI sourceRootRelativeFileUri = repositoryRelativeSourceRootUri.relativize(URI.create(filePath));
-                            if (entry.getChangeType() == DiffEntry.ChangeType.MODIFY)
-                            {
-                                final FileHeader header = formatter.toFileHeader(entry);
-                                for (final HunkHeader hunk : header.getHunks())
-                                {
-                                    for (final Edit edit : hunk.toEditList())
-                                    {
-                                        final Edit.Type type = edit.getType();
-                                        if (type == Edit.Type.INSERT || type == Edit.Type.REPLACE)
-                                        {
-                                            final Set<Integer> changedLines =
-                                                changedLinesByFile.computeIfAbsent(sourceRootRelativeFileUri.toString(),
-                                                                                   k -> new TreeSet<>());
-                                            IntStream.rangeClosed(edit.getBeginB() + 1, edit.getEndB()).forEachOrdered(changedLines::add);
-                                        }
-                                    }
-                                }
-                            }
-                            else if (entry.getChangeType() == DiffEntry.ChangeType.ADD)
-                            {
-                                newFiles.add(sourceRootRelativeFileUri.toString());
-                            }
-                        }
-                    }
-                }
-            }
-            return changes;
-        }
-        return new ProjectChanges(Collections.emptyMap(), Collections.emptySet());
-    }
-
-    /**
-     * Returns the commit for the given ref.
-     *
-     * @param repository the repository.
-     * @param ref the ref.
-     * @return the commit.
-     * @throws IOException if an I/O error occurs.
-     */
-    private RevCommit getCommitForRef(final Repository repository, final String ref) throws IOException
-    {
-        final RevCommit commmit;
-        try (RevWalk walk = new RevWalk(repository))
-        {
-            commmit = walk.parseCommit(repository.findRef(ref).getObjectId());
-            walk.dispose();
-        }
-        return commmit;
-    }
-
-    /**
-     * Finds a common ancestor between the source ref and the target ref.
-     *
-     * @param repository the repository.
-     * @param source the source ref.
-     * @param target the target ref.
-     * @return the merge base.
-     * @throws IOException if an I/O error occurs.
-     */
-    private RevCommit getMergeBase(final Repository repository, final String source, final String target) throws IOException
-    {
-        try (RevWalk walk = new RevWalk(repository))
-        {
-            final RevCommit revA = walk.parseCommit(repository.findRef(target).getObjectId());
-            final RevCommit revB = walk.parseCommit(repository.findRef(source).getObjectId());
-            walk.setRevFilter(RevFilter.MERGE_BASE);
-            walk.markStart(revA);
-            walk.markStart(revB);
-            final RevCommit next = walk.next();
-            walk.dispose();
-            return next;
-        }
-    }
-
-    /**
-     * Prepares a tree iterator/parser for the given commit.
-     *
-     * @param repository the repository.
-     * @param commit the commit.
-     * @return the tree iterator.
-     * @throws IOException if an I/O error occurs.
-     */
-    @Nonnull
-    private static AbstractTreeIterator prepareTreeParser(final Repository repository, final RevCommit commit)
-        throws IOException
-    {
-        try (RevWalk walk = new RevWalk(repository))
-        {
-            final RevTree tree = walk.parseTree(commit.getTree().getId());
-
-            final CanonicalTreeParser treeParser = new CanonicalTreeParser();
-            try (ObjectReader reader = repository.newObjectReader())
-            {
-                treeParser.reset(reader, tree.getId());
-            }
-
-            walk.dispose();
-
-            return treeParser;
-        }
+        return new GitDiffChangeResolver(repository,
+                                         project.getBasedir().getPath(),
+                                         compareBranch,
+                                         project.getCompileSourceRoots(),
+                                         getLog()).resolve();
     }
 }
