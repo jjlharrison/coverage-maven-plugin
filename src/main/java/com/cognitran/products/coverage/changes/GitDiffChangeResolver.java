@@ -21,7 +21,6 @@ import java.util.stream.IntStream;
 
 import javax.annotation.Nonnull;
 
-import org.apache.maven.plugin.logging.Log;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
@@ -54,7 +53,7 @@ public class GitDiffChangeResolver
     private Collection<String> compileSourceRoots;
 
     /** The logger. */
-    private Log log;
+    private Logger log;
 
     /** The project base directory path. */
     private String projectBaseDirectoryPath;
@@ -64,15 +63,14 @@ public class GitDiffChangeResolver
 
     /**
      * Constructor.
-     *
-     * @param repository the Git Repository.
+     *  @param repository the Git Repository.
      * @param projectBaseDirectoryPath the project base directory path.
      * @param compareBranch the branch to compare with.
      * @param compileSourceRoots the compile source roots to check.
      * @param log the logger.
      */
     public GitDiffChangeResolver(final Repository repository, final String projectBaseDirectoryPath, final String compareBranch,
-                                 final Collection<String> compileSourceRoots, final Log log)
+                                 final Collection<String> compileSourceRoots, final Logger log)
     {
         this.projectBaseDirectoryPath = projectBaseDirectoryPath;
         this.compareBranch = compareBranch;
@@ -95,8 +93,8 @@ public class GitDiffChangeResolver
             final URI moduleRootDirectoryUri = addTrailingSlash(URI.create(projectBaseDirectoryPath));
             final URI repositoryRelativeModuleUri = repositoryRootDirectoryUri.relativize(moduleRootDirectoryUri);
             final RevCommit compareCommit = getCommitForRef(repository, "refs/heads/" + compareBranch);
-            log.info("Comparing current directory with " + compareBranch + " (" + compareCommit.getName() + ").");
-            log.info("Run \"git diff " + compareBranch + "...HEAD\" to see diff.");
+            log.debug("Comparing current directory with " + compareBranch + " (" + compareCommit.getName() + ").");
+            log.debug("Run \"git diff " + compareBranch + "...HEAD\" to see diff.");
             final AbstractTreeIterator oldTreeParser = new FileTreeIterator(repository);
             final AbstractTreeIterator newTreeParser = prepareTreeParser(repository,
                                                                          getMergeBase(repository, "HEAD", "refs/heads/" + compareBranch));

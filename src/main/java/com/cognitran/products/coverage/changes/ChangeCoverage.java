@@ -7,8 +7,6 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
 
-import org.apache.maven.plugin.logging.Log;
-
 /**
  * Change coverage information.
  */
@@ -64,7 +62,7 @@ public abstract class ChangeCoverage
      *
      * @param log the log.
      */
-    public void describe(final Log log)
+    public void describe(final Logger log)
     {
         final boolean coverageComplete = isCoverageComplete();
         final boolean includeCoveredDetail = log.isDebugEnabled();
