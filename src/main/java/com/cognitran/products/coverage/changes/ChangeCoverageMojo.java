@@ -74,23 +74,23 @@ public class ChangeCoverageMojo extends AbstractMojo
     @Override
     public void execute() throws MojoFailureException
     {
-        final File logFile = new File(project.getBuild().getDirectory(), "change-coverage.log");
-        try (Logger logger = new Logger(getLog(), logFile))
+        if (skip)
         {
-            if (skip)
-            {
-                logger.info("Skipping.");
-            }
-            else if ("pom".equals(project.getPackaging()))
-            {
-                logger.info("Skipping POM module.");
-            }
-            else if (!jacocoXmlReport.isFile())
-            {
-                logger.info("JaCoCo report not found (" + jacocoXmlReport.getPath() + "). "
-                            + "Ensure that the jacoco:report goal has been executed.");
-            }
-            else
+            getLog().info("Skipping.");
+        }
+        else if ("pom".equals(project.getPackaging()))
+        {
+            getLog().info("Skipping POM module.");
+        }
+        else if (!jacocoXmlReport.isFile())
+        {
+            getLog().info("JaCoCo report not found (" + jacocoXmlReport.getPath() + "). "
+                          + "Ensure that the jacoco:report goal has been executed.");
+        }
+        else
+        {
+            final File logFile = new File(project.getBuild().getDirectory(), "change-coverage.log");
+            try (Logger logger = new Logger(getLog(), logFile))
             {
                 final ProjectChanges changes;
                 final File repositoryLogFile;
@@ -147,7 +147,6 @@ public class ChangeCoverageMojo extends AbstractMojo
                 {
                     logger.info("No new code found.");
                 }
-
             }
         }
     }
