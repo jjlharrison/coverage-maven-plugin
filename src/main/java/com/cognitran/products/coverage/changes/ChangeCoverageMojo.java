@@ -116,29 +116,35 @@ public class ChangeCoverageMojo extends AbstractMojo
                 if (changes.hasChanges())
                 {
                     logger.info(changes.toString());
-                    enforceChangeCoverageRequirements(changes, logger);
 
-                    if (!logFile.getAbsolutePath().equals(repositoryLogFile.getAbsolutePath()))
+                    try
                     {
-                        synchronized (AGGREGATE_LOG_WRITE_LOCK)
+                        enforceChangeCoverageRequirements(changes, logger);
+                    }
+                    finally
+                    {
+                        if (!logFile.getAbsolutePath().equals(repositoryLogFile.getAbsolutePath()))
                         {
-                            logger.flush();
-                            try (FileOutputStream fileOutputStream = new FileOutputStream(repositoryLogFile, true);
-                                 OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream, UTF_8);
-                                 PrintWriter printWriter = new PrintWriter(outputStreamWriter);
-                                 InputStream logFileInputStream = new FileInputStream(logFile);
-                                 Reader logFileReader = new InputStreamReader(logFileInputStream, UTF_8))
+                            synchronized (AGGREGATE_LOG_WRITE_LOCK)
                             {
-                                printWriter.println("------------------------------------------------------------------------");
-                                printWriter.println("Project: " + project.getName());
-                                printWriter.println("------------------------------------------------------------------------");
-                                printWriter.println();
-                                IOUtils.copy(logFileReader, printWriter);
-                                printWriter.println();
-                            }
-                            catch (final IOException e)
-                            {
-                                throw new RuntimeException(e);
+                                logger.flush();
+                                try (FileOutputStream fileOutputStream = new FileOutputStream(repositoryLogFile, true);
+                                     OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream, UTF_8);
+                                     PrintWriter printWriter = new PrintWriter(outputStreamWriter);
+                                     InputStream logFileInputStream = new FileInputStream(logFile);
+                                     Reader logFileReader = new InputStreamReader(logFileInputStream, UTF_8))
+                                {
+                                    printWriter.println("------------------------------------------------------------------------");
+                                    printWriter.println("Project: " + project.getName());
+                                    printWriter.println("------------------------------------------------------------------------");
+                                    printWriter.println();
+                                    IOUtils.copy(logFileReader, printWriter);
+                                    printWriter.println();
+                                }
+                                catch (final IOException e)
+                                {
+                                    throw new RuntimeException(e);
+                                }
                             }
                         }
                     }
