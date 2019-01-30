@@ -25,6 +25,8 @@ import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.diff.RawTextComparator;
+import org.eclipse.jgit.lib.BranchTrackingStatus;
+import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.patch.FileHeader;
@@ -63,7 +65,8 @@ public class GitDiffChangeResolver
 
     /**
      * Constructor.
-     *  @param repository the Git Repository.
+     *
+     * @param repository the Git Repository.
      * @param projectBaseDirectoryPath the project base directory path.
      * @param compareBranch the branch to compare with.
      * @param compileSourceRoots the compile source roots to check.
@@ -92,12 +95,15 @@ public class GitDiffChangeResolver
             final URI repositoryRootDirectoryUri = addTrailingSlash(URI.create(repository.getDirectory().getPath()).resolve(""));
             final URI moduleRootDirectoryUri = addTrailingSlash(URI.create(projectBaseDirectoryPath));
             final URI repositoryRelativeModuleUri = repositoryRootDirectoryUri.relativize(moduleRootDirectoryUri);
-            final RevCommit compareCommit = getCommitForRef(repository, "refs/heads/" + compareBranch);
+
+            final String longBranchName = resolveCompareBranch();
+            final RevCommit compareCommit = getCommitForRef(repository, longBranchName);
             log.debug("Comparing current directory with " + compareBranch + " (" + compareCommit.getName() + ").");
             log.debug("Run \"git diff " + compareBranch + "...HEAD\" to see diff.");
             final AbstractTreeIterator oldTreeParser = new FileTreeIterator(repository);
+            final RevCommit mergeBase = getMergeBase(repository, "HEAD", longBranchName);
             final AbstractTreeIterator newTreeParser = prepareTreeParser(repository,
-                                                                         getMergeBase(repository, "HEAD", "refs/heads/" + compareBranch));
+                                                                         mergeBase);
             final DiffFormatter formatter = new DiffFormatter(NULL_OUTPUT_STREAM);
             formatter.setDiffComparator(RawTextComparator.WS_IGNORE_ALL);
             formatter.setRepository(repository);
@@ -132,6 +138,25 @@ public class GitDiffChangeResolver
             return changes;
         }
         return new ProjectChanges(Collections.emptyMap(), Collections.emptySet());
+    }
+
+    /**
+     * Resolves the branch to compare with.
+     *
+     * @return the branch to compare with.
+     * @throws IOException if an I/O error occurs.
+     */
+    protected String resolveCompareBranch() throws IOException
+    {
+        String longBranchName = Constants.R_HEADS + Repository.shortenRefName(compareBranch);
+        final BranchTrackingStatus trackingStatus = BranchTrackingStatus.of(repository, compareBranch);
+        if (trackingStatus != null && trackingStatus.getBehindCount() > 0)
+        {
+            longBranchName = trackingStatus.getRemoteTrackingBranch();
+            log.warn(compareBranch + " is behind remote tracking branch, comparing with " + Repository.shortenRefName(longBranchName)
+                     + " instead.");
+        }
+        return longBranchName;
     }
 
     /**
