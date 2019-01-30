@@ -116,41 +116,52 @@ public class ChangeCoverageReportMojo extends AbstractMojo
                 {
                     logger.info(changes.toString());
 
-                    try
-                    {
-                        reportChangeCoverageMeasures(changes, logger);
-                    }
-                    finally
-                    {
-                        if (!logFile.getAbsolutePath().equals(repositoryLogFile.getAbsolutePath()))
-                        {
-                            synchronized (AGGREGATE_LOG_WRITE_LOCK)
-                            {
-                                logger.flush();
-                                try (FileOutputStream fileOutputStream = new FileOutputStream(repositoryLogFile, true);
-                                     OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream, UTF_8);
-                                     PrintWriter printWriter = new PrintWriter(outputStreamWriter);
-                                     InputStream logFileInputStream = new FileInputStream(logFile);
-                                     Reader logFileReader = new InputStreamReader(logFileInputStream, UTF_8))
-                                {
-                                    printWriter.println("------------------------------------------------------------------------");
-                                    printWriter.println("Project: " + project.getName());
-                                    printWriter.println("------------------------------------------------------------------------");
-                                    printWriter.println();
-                                    IOUtils.copy(logFileReader, printWriter);
-                                    printWriter.println();
-                                }
-                                catch (final IOException e)
-                                {
-                                    throw new RuntimeException(e);
-                                }
-                            }
-                        }
-                    }
+                    reportChangeCoverageMeasures(changes, logger);
+
+                    appendLogFileToRepositoryLogFile(logger, logFile, repositoryLogFile);
                 }
                 else
                 {
                     logger.info("No new code found.");
+                }
+            }
+        }
+    }
+
+    /**
+     * Appends the module log file to the repository log file.
+     *
+     * @param logger the logger.
+     * @param logFile the module log file.
+     * @param repositoryLogFile the repository log file.
+     */
+    protected void appendLogFileToRepositoryLogFile(final Logger logger, final File logFile, final File repositoryLogFile)
+    {
+        if (!logFile.getAbsolutePath().equals(repositoryLogFile.getAbsolutePath()))
+        {
+            synchronized (AGGREGATE_LOG_WRITE_LOCK)
+            {
+                logger.flush();
+                try
+                {
+                    Files.forceMkdir(repositoryLogFile.getParentFile());
+                    try (FileOutputStream fileOutputStream = new FileOutputStream(repositoryLogFile, true);
+                         OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream, UTF_8);
+                         PrintWriter printWriter = new PrintWriter(outputStreamWriter);
+                         InputStream logFileInputStream = new FileInputStream(logFile);
+                         Reader logFileReader = new InputStreamReader(logFileInputStream, UTF_8))
+                    {
+                        printWriter.println("------------------------------------------------------------------------");
+                        printWriter.println("Project: " + project.getName());
+                        printWriter.println("------------------------------------------------------------------------");
+                        printWriter.println();
+                        IOUtils.copy(logFileReader, printWriter);
+                        printWriter.println();
+                    }
+                }
+                catch (final IOException e)
+                {
+                    throw new RuntimeException(e);
                 }
             }
         }
