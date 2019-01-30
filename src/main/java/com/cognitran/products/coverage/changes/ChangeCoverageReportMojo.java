@@ -24,7 +24,6 @@ import javax.annotation.Nullable;
 import javax.xml.bind.JAXB;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -45,22 +44,18 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * Goal which calculates coverage levels for changed Java code and enforces minimum requirements.
  */
 @Mojo(name = "report", threadSafe = true, defaultPhase = LifecyclePhase.POST_SITE)
-public class ChangeCoverageReportMojo extends AbstractMojo
+public class ChangeCoverageReportMojo extends AbstractChangeCoverageMojo
 {
     /** Log to guard write to the aggregate log file. */
     private static final Object AGGREGATE_LOG_WRITE_LOCK = new Object();
 
     /** The branch to compare with to detect changes. */
-    @Parameter(defaultValue = "develop", property = "coverage.change.branch")
+    @Parameter(defaultValue = "develop", property = "coverage.change.branch", required = true)
     private String compareBranch;
 
     /** The JaCoCo XML report file. */
     @Parameter(defaultValue = "${project.reporting.outputDirectory}/jacoco/jacoco.xml", required = true)
     private File jacocoXmlReport;
-
-    /** The JaCoCo XML report file. */
-    @Parameter(defaultValue = "${project.reporting.outputDirectory}/change-coverage/report.xml", required = true)
-    private File xmlReportFile;
 
     /** The Maven project. */
     @Parameter(defaultValue = "${project}", readonly = true)
@@ -249,6 +244,7 @@ public class ChangeCoverageReportMojo extends AbstractMojo
                     summary.setBranch(changeCodeBranchCoverage);
                     summary.setLine(changeCodeLineCoverage);
                     report.setSummary(summary);
+                    final File xmlReportFile = getXmlReportFile();
                     Files.forceMkdir(xmlReportFile.getParentFile());
                     JAXB.marshal(report, xmlReportFile);
                 }

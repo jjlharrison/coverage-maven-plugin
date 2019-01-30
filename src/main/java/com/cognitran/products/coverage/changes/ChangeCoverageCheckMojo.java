@@ -7,7 +7,6 @@ import java.io.File;
 
 import javax.xml.bind.JAXB;
 
-import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -21,7 +20,7 @@ import com.cognitran.products.coverage.changes.report.ChangeCoverageReport;
  * Goal which calculates coverage levels for changed Java code and enforces minimum requirements.
  */
 @Mojo(name = "check", threadSafe = true, defaultPhase = LifecyclePhase.POST_SITE)
-public class ChangeCoverageCheckMojo extends AbstractMojo
+public class ChangeCoverageCheckMojo extends AbstractChangeCoverageMojo
 {
     /** The required coverage percentage for changed branches. */
     @Parameter(defaultValue = "92", property = "coverage.change.branch.requirement")
@@ -30,10 +29,6 @@ public class ChangeCoverageCheckMojo extends AbstractMojo
     /** The required coverage percentage for changed lines. */
     @Parameter(defaultValue = "92", property = "coverage.change.line.requirement")
     private double changedLineCoverageRequirementPercentage;
-
-    /** The JaCoCo XML report file. */
-    @Parameter(defaultValue = "${project.reporting.outputDirectory}/change-coverage/report.xml", required = true)
-    private File xmlReportFile;
 
     /** Whether to skip change coverage check. */
     @Parameter(defaultValue = "false", property = "change-coverage.check.skip")
@@ -46,6 +41,7 @@ public class ChangeCoverageCheckMojo extends AbstractMojo
     @Override
     public void execute() throws MojoFailureException
     {
+        final File xmlReportFile = getXmlReportFile();
         if (skip)
         {
             getLog().info("Skipping.");
