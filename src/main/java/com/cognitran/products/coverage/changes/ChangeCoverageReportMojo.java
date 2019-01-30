@@ -21,10 +21,10 @@ import java.util.function.ToIntFunction;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.xml.bind.JAXB;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -36,24 +36,19 @@ import org.xml.sax.SAXException;
 
 import com.cognitran.products.coverage.changes.diff.ProjectChanges;
 import com.cognitran.products.coverage.changes.jacoco.JacocoReportParser;
+import com.cognitran.products.coverage.changes.report.ChangeCoverageReport;
+import com.cognitran.products.coverage.changes.report.ChangeCoverageReportSummary;
+import com.cognitran.products.utilities.io.Files;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * Goal which calculates coverage levels for changed Java code and enforces minimum requirements.
  */
-@Mojo(name = "change-coverage", threadSafe = true, defaultPhase = LifecyclePhase.POST_SITE)
-public class ChangeCoverageMojo extends AbstractMojo
+@Mojo(name = "report", threadSafe = true, defaultPhase = LifecyclePhase.POST_SITE)
+public class ChangeCoverageReportMojo extends AbstractMojo
 {
     /** Log to guard write to the aggregate log file. */
     private static final Object AGGREGATE_LOG_WRITE_LOCK = new Object();
-
-    /** The required coverage percentage for changed branches. */
-    @Parameter(defaultValue = "92", property = "coverage.change.branch.requirement")
-    private double changedBranchCoverageRequirementPercentage;
-
-    /** The required coverage percentage for changed lines. */
-    @Parameter(defaultValue = "92", property = "coverage.change.line.requirement")
-    private double changedLineCoverageRequirementPercentage;
 
     /** The branch to compare with to detect changes. */
     @Parameter(defaultValue = "develop", property = "coverage.change.branch")
@@ -63,16 +58,20 @@ public class ChangeCoverageMojo extends AbstractMojo
     @Parameter(defaultValue = "${project.reporting.outputDirectory}/jacoco/jacoco.xml", required = true)
     private File jacocoXmlReport;
 
+    /** The JaCoCo XML report file. */
+    @Parameter(defaultValue = "${project.reporting.outputDirectory}/change-coverage/report.xml", required = true)
+    private File xmlReportFile;
+
     /** The Maven project. */
     @Parameter(defaultValue = "${project}", readonly = true)
     private MavenProject project;
 
     /** Whether to skip change coverage check. */
-    @Parameter(defaultValue = "false", property = "coverage.change.skip")
+    @Parameter(defaultValue = "false", property = "change-coverage.skip")
     private boolean skip;
 
     @Override
-    public void execute() throws MojoFailureException
+    public void execute()
     {
         if (skip)
         {
@@ -119,7 +118,7 @@ public class ChangeCoverageMojo extends AbstractMojo
 
                     try
                     {
-                        enforceChangeCoverageRequirements(changes, logger);
+                        reportChangeCoverageMeasures(changes, logger);
                     }
                     finally
                     {
@@ -204,13 +203,12 @@ public class ChangeCoverageMojo extends AbstractMojo
     }
 
     /**
-     * Enforces change coverage requirements.
+     * Reports the change coverage measures.
      *
      * @param changes the project changes.
      * @param logger the logger.
-     * @throws MojoFailureException if the requirements are not met.
      */
-    private void enforceChangeCoverageRequirements(final ProjectChanges changes, final Logger logger) throws MojoFailureException
+    private void reportChangeCoverageMeasures(final ProjectChanges changes, final Logger logger)
     {
         try
         {
@@ -234,19 +232,14 @@ public class ChangeCoverageMojo extends AbstractMojo
                         calculateChangeCoveragePercentage(coverage, "line",
                                                           ChangeCoverage::getCoveredChangedLinesCount,
                                                           ChangeCoverage::getTotalChangedLinesCount, logger);
-                    final boolean changedBranchRequirementMet = changeCodeBranchCoverage >= changedBranchCoverageRequirementPercentage;
-                    final boolean changedLineRequirementMet = changeCodeLineCoverage >= changedLineCoverageRequirementPercentage;
-                    // TODO Handle case when both requirements are met.
-                    if (!changedBranchRequirementMet)
-                    {
-                        fail(changedBranchCoverageRequirementPercentage + "% requirement for test coverage of changed branches not met.",
-                             logger);
-                    }
-                    else if (!changedLineRequirementMet)
-                    {
-                        fail(changedLineCoverageRequirementPercentage + "% requirement for test coverage of changed lines not met.",
-                             logger);
-                    }
+
+                    final ChangeCoverageReport report = new ChangeCoverageReport();
+                    final ChangeCoverageReportSummary summary = new ChangeCoverageReportSummary();
+                    summary.setBranch(changeCodeBranchCoverage);
+                    summary.setLine(changeCodeLineCoverage);
+                    report.setSummary(summary);
+                    Files.forceMkdir(xmlReportFile.getParentFile());
+                    JAXB.marshal(report, xmlReportFile);
                 }
             }
         }
@@ -254,19 +247,6 @@ public class ChangeCoverageMojo extends AbstractMojo
         {
             throw new RuntimeException(e);
         }
-    }
-
-    /**
-     * Fail build with the given message.
-     *
-     * @param message the message.
-     * @param logger the logger.
-     * @throws MojoFailureException the exception to fail the build.
-     */
-    private void fail(final String message, final Logger logger) throws MojoFailureException
-    {
-        logger.error(message);
-        throw new MojoFailureException(message);
     }
 
     /**
