@@ -5,7 +5,9 @@ package com.cognitran.products.coverage.changes;
 
 import static com.cognitran.products.coverage.changes.Utilities.capacity;
 import static org.apache.commons.io.output.NullOutputStream.NULL_OUTPUT_STREAM;
+import static org.eclipse.jgit.lib.Repository.shortenRefName;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
@@ -92,14 +94,14 @@ public class GitDiffChangeResolver
     {
         if (!compileSourceRoots.isEmpty())
         {
-            final URI repositoryRootDirectoryUri = addTrailingSlash(URI.create(repository.getDirectory().getPath()).resolve(""));
-            final URI moduleRootDirectoryUri = addTrailingSlash(URI.create(projectBaseDirectoryPath));
+            final URI repositoryRootDirectoryUri = repository.getDirectory().toURI().resolve("..");
+            final URI moduleRootDirectoryUri = new File(projectBaseDirectoryPath).toURI();
             final URI repositoryRelativeModuleUri = repositoryRootDirectoryUri.relativize(moduleRootDirectoryUri);
 
             final String longBranchName = resolveCompareBranch();
             final RevCommit compareCommit = getCommitForRef(repository, longBranchName);
-            log.debug("Comparing current directory with " + compareBranch + " (" + compareCommit.getName() + ").");
-            log.debug("Run \"git diff " + compareBranch + "...HEAD\" to see diff.");
+            log.debug("Comparing current directory with " + longBranchName + " (" + compareCommit.getName() + ").");
+            log.debug("Run \"git diff " + longBranchName + "...HEAD\" to see diff.");
             final AbstractTreeIterator oldTreeParser = new FileTreeIterator(repository);
             final RevCommit mergeBase = getMergeBase(repository, "HEAD", longBranchName);
             final AbstractTreeIterator newTreeParser = prepareTreeParser(repository,
@@ -110,8 +112,8 @@ public class GitDiffChangeResolver
             formatter.setContext(0);
 
             // Filter files not in source roots.
-            final List<TreeFilter> pathFilters = compileSourceRoots.stream()
-                                                     .map(s -> repositoryRootDirectoryUri.relativize(URI.create(s)).toString())
+            final List<TreeFilter> pathFilters = compileSourceRoots.stream().map(File::new).map(File::toURI)
+                                                     .map(s -> repositoryRootDirectoryUri.relativize(s).getPath())
                                                      .map(PathFilter::create)
                                                      .collect(Collectors.toList());
             formatter.setPathFilter(pathFilters.size() > 1 ? OrTreeFilter.create(pathFilters) : pathFilters.get(0));
@@ -125,13 +127,15 @@ public class GitDiffChangeResolver
                 final String filePath = entry.getNewPath();
                 if (filePath.startsWith(repositoryRelativeModuleUri.toString()))
                 {
-                    for (final String compileSourceRoot : compileSourceRoots)
+                    final List<URI> entrySourceRoots = compileSourceRoots.stream()
+                                                           .map(File::new)
+                                                           .map(File::toURI)
+                                                           .map(repositoryRootDirectoryUri::relativize)
+                                                           .filter(u -> filePath.startsWith(u.getPath()))
+                                                           .collect(Collectors.toList());
+                    for (final URI repositoryRelativeSourceRootUri : entrySourceRoots)
                     {
-                        final URI repositoryRelativeSourceRootUri = repositoryRootDirectoryUri.relativize(URI.create(compileSourceRoot));
-                        if (filePath.startsWith(repositoryRelativeSourceRootUri.toString()))
-                        {
-                            processDiffEntry(formatter, entry, repositoryRelativeSourceRootUri, newFiles, changedLinesByFile);
-                        }
+                        processDiffEntry(formatter, entry, repositoryRelativeSourceRootUri, newFiles, changedLinesByFile);
                     }
                 }
             }
@@ -148,13 +152,22 @@ public class GitDiffChangeResolver
      */
     protected String resolveCompareBranch() throws IOException
     {
-        String longBranchName = Constants.R_HEADS + Repository.shortenRefName(compareBranch);
+        String longBranchName = Constants.R_HEADS + shortenRefName(compareBranch);
         final BranchTrackingStatus trackingStatus = BranchTrackingStatus.of(repository, compareBranch);
-        if (trackingStatus != null && trackingStatus.getBehindCount() > 0)
+        if (trackingStatus != null)
         {
-            longBranchName = trackingStatus.getRemoteTrackingBranch();
-            log.warn(compareBranch + " is behind remote tracking branch, comparing with " + Repository.shortenRefName(longBranchName)
-                     + " instead.");
+            if (trackingStatus.getBehindCount() > 0)
+            {
+                longBranchName = trackingStatus.getRemoteTrackingBranch();
+                log.warn(String.format("%s is behind remote tracking branch, comparing with %s instead.",
+                                       compareBranch, shortenRefName(longBranchName)));
+            }
+            else if (longBranchName.equals(repository.getFullBranch()) && trackingStatus.getAheadCount() > 0)
+            {
+                longBranchName = trackingStatus.getRemoteTrackingBranch();
+                log.warn(String.format("%s is ahead of remote tracking branch, comparing with %s instead.",
+                                       compareBranch, shortenRefName(longBranchName)));
+            }
         }
         return longBranchName;
     }
