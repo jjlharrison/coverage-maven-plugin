@@ -71,7 +71,7 @@ public class JacocoReportPackageParser extends DefaultHandler
         }
         else if ("sourcefile".equals(qName))
         {
-            final String filePath = packageName + '/' + attributes.getValue("name");
+            final String filePath = (packageName.isEmpty() ? "" : packageName + '/') + attributes.getValue("name");
             if (newFiles.contains(filePath))
             {
                 final JacocoReportNewFileParser newFileParser = new JacocoReportNewFileParser(filePath);

@@ -61,7 +61,7 @@ public class JacocoReportParser extends DefaultHandler
         final int changeCount = newFiles.size() + changedLinesByFile.size();
         interestingPackages = new HashSet<>(capacity(changeCount));
         Stream.concat(newFiles.stream(), changedLinesByFile.keySet().stream())
-            .map(n -> n.substring(0, n.lastIndexOf('/')))
+            .map(n -> n.contains("/") ? n.substring(0, n.lastIndexOf('/')) : "")
             .forEach(interestingPackages::add);
         coverage = new ArrayList<>(changeCount);
     }

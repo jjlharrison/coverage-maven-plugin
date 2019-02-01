@@ -249,17 +249,6 @@ public class GitDiffChangeResolver
     }
 
     /**
-     * Appends a trailing slash to the URI if it doesn't already have one.
-     *
-     * @param uri the URI.
-     * @return the URI with the trailing slash.
-     */
-    protected static URI addTrailingSlash(final URI uri)
-    {
-        return uri.toString().endsWith("/") ? uri : URI.create(uri.toString() + "/");
-    }
-
-    /**
      * Prepares a tree iterator/parser for the given commit.
      *
      * @param repository the repository.
