@@ -8,17 +8,22 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.Immutable;
 
 /**
  * Change coverage information for a modified file.
  */
-public class ModifiedFileChangeCoverage extends FileChangeCoverage
+@Immutable
+public class ModifiedFileChangeCoverage implements FileChangeCoverage
 {
     /** The changed line numbers. */
-    private Set<Integer> changedLineNumbers;
+    private final Set<Integer> changedLineNumbers;
 
     /** The coverage information for changed lines. */
-    private Set<LineCodeCoverage> coverage = new TreeSet<>();
+    private final Set<LineCodeCoverage> coverage = new TreeSet<>();
+
+    /** The project/module source root relative file path. */
+    private final String filePath;
 
     /**
      * Constructor.
@@ -28,7 +33,7 @@ public class ModifiedFileChangeCoverage extends FileChangeCoverage
      */
     public ModifiedFileChangeCoverage(final String filePath, final Set<Integer> changedLineNumbers)
     {
-        super(filePath);
+        this.filePath = filePath;
         this.changedLineNumbers = changedLineNumbers;
     }
 
@@ -43,13 +48,14 @@ public class ModifiedFileChangeCoverage extends FileChangeCoverage
     }
 
     /**
-     * Sets the changed line numbers.
+     * Returns the project/module source root relative file path.
      *
-     * @param changedLineNumbers the changed line numbers.
+     * @return the project/module source root relative file path.
      */
-    public void setChangedLineNumbers(final Set<Integer> changedLineNumbers)
+    @Override
+    public String getFilePath()
     {
-        this.changedLineNumbers = changedLineNumbers;
+        return filePath;
     }
 
     /**
@@ -75,7 +81,15 @@ public class ModifiedFileChangeCoverage extends FileChangeCoverage
 
     @Nonnull
     @Override
-    protected String summariseChangeType()
+    public String summariseChangeAndCoverage()
+    {
+        final String branches = getTotalChangedBranchesCount() > 0 ? (", " + summariseBranchCoverage()) : "";
+        return summariseChangeType() + " " + getFilePath() + ": " + summariseLineCoverage() + branches;
+    }
+
+    @Nonnull
+    @Override
+    public String summariseChangeType()
     {
         return "Changed file";
     }

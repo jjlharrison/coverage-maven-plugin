@@ -59,6 +59,11 @@
             <artifactId>org.eclipse.jgit</artifactId>
             <version>5.2.0.201812061821-r</version>
         </dependency>
+        <dependency>
+            <groupId>nl.jqno.equalsverifier</groupId>
+            <artifactId>equalsverifier</artifactId>
+            <version>3.1.4</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -98,6 +103,17 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- argLine property is set by the JaCoCo Maven plugin. -->
+                    <!-- java.awt.headless set to prevent ForkedBooter stealing focus on OS X. -->
+                    <!--suppress MavenModelInspection -->
+                    <argLine>${argLine} -Djava.awt.headless=true</argLine>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <trimStackTrace>false</trimStackTrace>
+                </configuration>
             </plugin>
             <plugin>
                 <artifactId>maven-invoker-plugin</artifactId>

@@ -3,11 +3,16 @@
  */
 package com.cognitran.products.coverage.changes;
 
+import javax.annotation.Nonnull;
+
 /**
  * Coverage information for a new file.
  */
-public class NewFileCodeCoverage extends FileChangeCoverage
+public class NewFileCodeCoverage extends AbstractChangeCoverage implements FileChangeCoverage
 {
+    /** The project/module source root relative file path. */
+    private final String filePath;
+
     /**
      * Constructor.
      *
@@ -15,11 +20,30 @@ public class NewFileCodeCoverage extends FileChangeCoverage
      */
     public NewFileCodeCoverage(final String filePath)
     {
-        super(filePath);
+        this.filePath = filePath;
+    }
+
+    /**
+     * Returns the project/module source root relative file path.
+     *
+     * @return the project/module source root relative file path.
+     */
+    @Override
+    public String getFilePath()
+    {
+        return filePath;
+    }
+
+    @Nonnull
+    @Override
+    public String summariseChangeAndCoverage()
+    {
+        final String branches = getTotalChangedBranchesCount() > 0 ? (", " + summariseBranchCoverage()) : "";
+        return summariseChangeType() + " " + getFilePath() + ": " + summariseLineCoverage() + branches;
     }
 
     @Override
-    protected String summariseChangeType()
+    public String summariseChangeType()
     {
         return "New file";
     }

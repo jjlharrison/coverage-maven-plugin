@@ -10,59 +10,25 @@ import javax.annotation.Nonnull;
 /**
  * Change coverage information.
  */
-public abstract class ChangeCoverage
+public interface ChangeCoverage
 {
-    /** The count of changed branches that are covered by tests. */
-    private int coveredChangedBranchesCount;
-
-    /** The count of changed lines that are covered by tests. */
-    private int coveredChangedLinesCount;
-
-    /** The count of changed branches that are not covered by tests. */
-    private int missedChangedBranchesCount;
-
-    /** The count of changed lines that are not covered by tests. */
-    private int missedChangedLinesCount;
-
-    /**
-     * Constructor.
-     */
-    public ChangeCoverage()
-    {
-        // Default
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param coveredChangedLinesCount the count of changed lines that are covered by tests.
-     * @param missedChangedLinesCount the count of changed lines that are not covered by tests.
-     * @param coveredChangedBranchesCount the count of changed branches that are covered by tests.
-     * @param missedChangedBranchesCount the count of changed branches that are not covered by tests.
-     */
-    public ChangeCoverage(final int coveredChangedLinesCount, final int missedChangedLinesCount, final int coveredChangedBranchesCount,
-                          final int missedChangedBranchesCount)
-    {
-        this.coveredChangedLinesCount = coveredChangedLinesCount;
-        this.missedChangedLinesCount = missedChangedLinesCount;
-        this.coveredChangedBranchesCount = coveredChangedBranchesCount;
-        this.missedChangedBranchesCount = missedChangedBranchesCount;
-    }
-
     /**
      * Describes the coverage information.
      *
      * @param includeCoveredDetail whether to include detail about covered changes (in addition to detail about uncovered changes).
      * @return the description of the coverage.
      */
-    public abstract String describe(boolean includeCoveredDetail);
+    default String describe(final boolean includeCoveredDetail)
+    {
+        return summariseChangeAndCoverage();
+    }
 
     /**
      * Writes the description to the given log.
      *
      * @param log the log.
      */
-    public void describe(final Logger log)
+    default void describe(final Logger log)
     {
         final boolean coverageComplete = isCoverageComplete();
         final boolean includeCoveredDetail = log.isDebugEnabled();
@@ -78,115 +44,51 @@ public abstract class ChangeCoverage
      *
      * @return the count of changed branches that are covered by tests.
      */
-    public int getCoveredChangedBranchesCount()
-    {
-        return coveredChangedBranchesCount;
-    }
-
-    /**
-     * Sets the count of changed branches that are covered by tests.
-     *
-     * @param coveredChangedBranchesCount the count of changed branches that are covered by tests.
-     */
-    public void setCoveredChangedBranchesCount(final int coveredChangedBranchesCount)
-    {
-        this.coveredChangedBranchesCount = coveredChangedBranchesCount;
-    }
+    int getCoveredChangedBranchesCount();
 
     /**
      * Returns the count of changed lines that are covered by tests.
      *
      * @return the count of changed lines that are covered by tests.
      */
-    public int getCoveredChangedLinesCount()
-    {
-        return coveredChangedLinesCount;
-    }
-
-    /**
-     * Sets the count of changed lines that are covered by tests.
-     *
-     * @param coveredChangedLinesCount the count of changed lines that are covered by tests.
-     */
-    public void setCoveredChangedLinesCount(final int coveredChangedLinesCount)
-    {
-        this.coveredChangedLinesCount = coveredChangedLinesCount;
-    }
+    int getCoveredChangedLinesCount();
 
     /**
      * Returns the count of changed branches that are not covered by tests.
      *
      * @return the count of changed branches that are not covered by tests.
      */
-    public int getMissedChangedBranchesCount()
-    {
-        return missedChangedBranchesCount;
-    }
-
-    /**
-     * Sets the count of changed branches that are not covered by tests.
-     *
-     * @param missedChangedBranchesCount the count of changed branches that are not covered by tests.
-     */
-    public void setMissedChangedBranchesCount(final int missedChangedBranchesCount)
-    {
-        this.missedChangedBranchesCount = missedChangedBranchesCount;
-    }
+    int getMissedChangedBranchesCount();
 
     /**
      * Returns the count of changed lines that are not covered by tests.
      *
      * @return the count of changed lines that are not covered by tests.
      */
-    public int getMissedChangedLinesCount()
-    {
-        return missedChangedLinesCount;
-    }
-
-    /**
-     * Sets the count of changed lines that are not covered by tests.
-     *
-     * @param missedChangedLinesCount the count of changed lines that are not covered by tests.
-     */
-    public void setMissedChangedLinesCount(final int missedChangedLinesCount)
-    {
-        this.missedChangedLinesCount = missedChangedLinesCount;
-    }
+    int getMissedChangedLinesCount();
 
     /**
      * Returns the count of branches on changed lines.
      *
      * @return the count of branches on changed lines.
      */
-    public int getTotalChangedBranchesCount()
-    {
-        return getCoveredChangedBranchesCount() + getMissedChangedBranchesCount();
-    }
+    int getTotalChangedBranchesCount();
 
     /**
      * Returns the count of changes lines.
      *
      * @return the count of changes lines.
      */
-    public int getTotalChangedLinesCount()
-    {
-        return getCoveredChangedLinesCount() + getMissedChangedLinesCount();
-    }
+    int getTotalChangedLinesCount();
 
     /**
      * Returns whether there are any testable instructions or branches in the changed code.
      *
      * @return whether there are any testable instructions or branches in the changed code.
      */
-    public boolean hasTestableChanges()
+    default boolean hasTestableChanges()
     {
         return (getTotalChangedLinesCount() + getTotalChangedBranchesCount()) > 0;
-    }
-
-    @Override
-    public final String toString()
-    {
-        return describe(true);
     }
 
     /**
@@ -194,14 +96,14 @@ public abstract class ChangeCoverage
      *
      * @return the summary of the change type.
      */
-    protected abstract String summariseChangeType();
+    String summariseChangeType();
 
     /**
      * Returns whether all the testable branches or instructions are covered.
      *
      * @return whether all the testable branches or instructions are covered.
      */
-    protected boolean isCoverageComplete()
+    default boolean isCoverageComplete()
     {
         return getTotalChangedBranchesCount() <= getCoveredChangedBranchesCount()
                && getTotalChangedLinesCount() <= getCoveredChangedLinesCount();
@@ -213,7 +115,7 @@ public abstract class ChangeCoverage
      * @return the summary of branch coverage.
      */
     @Nonnull
-    protected String summariseBranchCoverage()
+    default String summariseBranchCoverage()
     {
         return getCoveredChangedBranchesCount() + "/" + getTotalChangedBranchesCount() + " changed branches covered";
     }
@@ -223,7 +125,7 @@ public abstract class ChangeCoverage
      *
      * @return the summary of the change and the associated coverage.
      */
-    protected abstract String summariseChangeAndCoverage();
+    String summariseChangeAndCoverage();
 
     /**
      * Summarises the line coverage.
@@ -231,7 +133,7 @@ public abstract class ChangeCoverage
      * @return the summary of line coverage.
      */
     @Nonnull
-    protected String summariseLineCoverage()
+    default String summariseLineCoverage()
     {
         return getCoveredChangedLinesCount() + "/" + getTotalChangedLinesCount() + " changed lines covered";
     }

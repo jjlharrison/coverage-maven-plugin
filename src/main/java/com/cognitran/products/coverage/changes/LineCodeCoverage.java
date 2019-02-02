@@ -10,7 +10,7 @@ import javax.annotation.Nonnull;
 /**
  * Coverage information about a changed line.
  */
-public class LineCodeCoverage extends ChangeCoverage implements Comparable<LineCodeCoverage>
+public class LineCodeCoverage extends AbstractChangeCoverage implements Comparable<LineCodeCoverage>
 {
     /** The number of the changed line. */
     private final int lineNumber;
@@ -38,40 +38,19 @@ public class LineCodeCoverage extends ChangeCoverage implements Comparable<LineC
     }
 
     @Override
-    public boolean equals(final Object o)
-    {
-        if (this == o)
-        {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass())
-        {
-            return false;
-        }
-        final LineCodeCoverage that = (LineCodeCoverage) o;
-        return getLineNumber() == that.getLineNumber();
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return Objects.hash(getLineNumber());
-    }
-
-    @Override
     public String describe(final boolean includeCoveredDetail)
     {
         return summariseChangeAndCoverage();
     }
 
     @Override
-    protected String summariseChangeType()
+    public String summariseChangeType()
     {
         return "Line change";
     }
 
     @Override
-    protected String summariseChangeAndCoverage()
+    public String summariseChangeAndCoverage()
     {
         final int branchesCount = getTotalChangedBranchesCount();
         return "Line " + getLineNumber() + ": line " + (getCoveredChangedLinesCount() == 1 ? "covered" : "not covered") +
@@ -86,5 +65,28 @@ public class LineCodeCoverage extends ChangeCoverage implements Comparable<LineC
     public int getLineNumber()
     {
         return lineNumber;
+    }
+
+    @Override
+    public boolean equals(final Object other)
+    {
+        if (other instanceof LineCodeCoverage)
+        {
+            final LineCodeCoverage that = (LineCodeCoverage) other;
+            return that.canEqual(this) && this.getLineNumber() == that.getLineNumber() && super.equals(that);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean canEqual(final Object other)
+    {
+        return other instanceof LineCodeCoverage;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(super.hashCode(), getLineNumber());
     }
 }
