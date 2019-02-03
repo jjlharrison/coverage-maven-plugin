@@ -216,39 +216,33 @@ public class ChangeCoverageReportMojo extends AbstractChangeCoverageMojo
      */
     private void reportChangeCoverageMeasures(final ProjectChanges changes, final Logger logger)
     {
-        try
+        try (FileInputStream inputStream = new FileInputStream(jacocoXmlReport))
         {
-            if (jacocoXmlReport.isFile())
-            {
-                try (FileInputStream inputStream = new FileInputStream(jacocoXmlReport))
-                {
-                    final JacocoReportParser parser = new JacocoReportParser(changes.getNewFiles(), changes.getChangedLinesByFile());
-                    Utilities.parse(new InputSource(inputStream), parser, false);
-                    final List<ChangeCoverage> coverage = parser.getCoverage();
-                    coverage.stream()
-                        .filter(ChangeCoverage::hasTestableChanges)
-                        .forEach(c -> c.describe(logger));
+            final JacocoReportParser parser = new JacocoReportParser(changes.getNewFiles(), changes.getChangedLinesByFile());
+            Utilities.parse(new InputSource(inputStream), parser, false);
+            final List<ChangeCoverage> coverage = parser.getCoverage();
+            coverage.stream()
+                .filter(ChangeCoverage::hasTestableChanges)
+                .forEach(c -> c.describe(logger));
 
-                    final double changeCodeBranchCoverage =
-                        calculateChangeCoveragePercentage(coverage, "branch",
-                                                          ChangeCoverage::getCoveredChangedBranchesCount,
-                                                          ChangeCoverage::getTotalChangedBranchesCount, logger);
+            final double changeCodeBranchCoverage =
+                calculateChangeCoveragePercentage(coverage, "branch",
+                                                  ChangeCoverage::getCoveredChangedBranchesCount,
+                                                  ChangeCoverage::getTotalChangedBranchesCount, logger);
 
-                    final double changeCodeLineCoverage =
-                        calculateChangeCoveragePercentage(coverage, "line",
-                                                          ChangeCoverage::getCoveredChangedLinesCount,
-                                                          ChangeCoverage::getTotalChangedLinesCount, logger);
+            final double changeCodeLineCoverage =
+                calculateChangeCoveragePercentage(coverage, "line",
+                                                  ChangeCoverage::getCoveredChangedLinesCount,
+                                                  ChangeCoverage::getTotalChangedLinesCount, logger);
 
-                    final ChangeCoverageReport report = new ChangeCoverageReport();
-                    final ChangeCoverageReportSummary summary = new ChangeCoverageReportSummary();
-                    summary.setBranch(changeCodeBranchCoverage);
-                    summary.setLine(changeCodeLineCoverage);
-                    report.setSummary(summary);
-                    final File xmlReportFile = getXmlReportFile();
-                    Files.forceMkdir(xmlReportFile.getParentFile());
-                    JAXB.marshal(report, xmlReportFile);
-                }
-            }
+            final ChangeCoverageReport report = new ChangeCoverageReport();
+            final ChangeCoverageReportSummary summary = new ChangeCoverageReportSummary();
+            summary.setBranch(changeCodeBranchCoverage);
+            summary.setLine(changeCodeLineCoverage);
+            report.setSummary(summary);
+            final File xmlReportFile = getXmlReportFile();
+            Files.forceMkdir(xmlReportFile.getParentFile());
+            JAXB.marshal(report, xmlReportFile);
         }
         catch (final IOException | SAXException e)
         {
