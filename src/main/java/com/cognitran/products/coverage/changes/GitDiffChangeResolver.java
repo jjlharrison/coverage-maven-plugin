@@ -5,6 +5,7 @@ package com.cognitran.products.coverage.changes;
 
 import static com.cognitran.products.coverage.changes.Utilities.capacity;
 import static org.apache.commons.io.output.NullOutputStream.NULL_OUTPUT_STREAM;
+import static org.eclipse.jgit.lib.Constants.R_REMOTES;
 import static org.eclipse.jgit.lib.Repository.shortenRefName;
 
 import java.io.File;
@@ -21,8 +22,13 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.ListBranchCommand;
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.Edit;
@@ -30,6 +36,7 @@ import org.eclipse.jgit.diff.RawTextComparator;
 import org.eclipse.jgit.lib.BranchTrackingStatus;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectReader;
+import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.patch.FileHeader;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -99,9 +106,12 @@ public class GitDiffChangeResolver
             final URI repositoryRelativeModuleUri = repositoryRootDirectoryUri.relativize(moduleRootDirectoryUri);
 
             final String longBranchName = resolveCompareBranch();
-            final RevCommit compareCommit = getCommitForRef(repository, longBranchName);
-            log.debug("Comparing current directory with " + longBranchName + " (" + compareCommit.getName() + ").");
-            log.debug("Run \"git diff " + longBranchName + "...HEAD\" to see diff.");
+
+            if (longBranchName == null)
+            {
+                throw new RuntimeException("Could not resolve branch named " + compareBranch + ".");
+            }
+
             final AbstractTreeIterator oldTreeParser = new FileTreeIterator(repository);
             final RevCommit mergeBase = getMergeBase(repository, "HEAD", longBranchName);
             final AbstractTreeIterator newTreeParser = prepareTreeParser(repository,
@@ -153,23 +163,66 @@ public class GitDiffChangeResolver
     protected String resolveCompareBranch() throws IOException
     {
         String longBranchName = Constants.R_HEADS + shortenRefName(compareBranch);
-        final BranchTrackingStatus trackingStatus = BranchTrackingStatus.of(repository, compareBranch);
-        if (trackingStatus != null)
+        final RevCommit refCommit = getCommitForRef(repository, longBranchName);
+        if (refCommit == null)
         {
-            if (trackingStatus.getBehindCount() > 0)
+            return fallbackToRemoteBranch();
+        }
+        else
+        {
+            final BranchTrackingStatus trackingStatus = BranchTrackingStatus.of(repository, compareBranch);
+            if (trackingStatus != null)
             {
-                longBranchName = trackingStatus.getRemoteTrackingBranch();
-                log.warn(String.format("%s is behind remote tracking branch, comparing with %s instead.",
-                                       compareBranch, shortenRefName(longBranchName)));
-            }
-            else if (longBranchName.equals(repository.getFullBranch()) && trackingStatus.getAheadCount() > 0)
-            {
-                longBranchName = trackingStatus.getRemoteTrackingBranch();
-                log.warn(String.format("%s is ahead of remote tracking branch, comparing with %s instead.",
-                                       compareBranch, shortenRefName(longBranchName)));
+                if (trackingStatus.getBehindCount() > 0)
+                {
+                    longBranchName = trackingStatus.getRemoteTrackingBranch();
+                    log.warn(String.format("%s is behind remote tracking branch, comparing with %s instead.",
+                                           compareBranch, shortenRefName(longBranchName)));
+                }
+                else if (longBranchName.equals(repository.getFullBranch()) && trackingStatus.getAheadCount() > 0)
+                {
+                    longBranchName = trackingStatus.getRemoteTrackingBranch();
+                    log.warn(String.format("%s is ahead of remote tracking branch, comparing with %s instead.",
+                                           compareBranch, shortenRefName(longBranchName)));
+                }
             }
         }
         return longBranchName;
+    }
+
+    /**
+     * Fallback to the remote branch if the local branch doesn't exist.
+     *
+     * @return the remote branch ref.
+     */
+    @Nullable
+    private String fallbackToRemoteBranch()
+    {
+        try
+        {
+            final List<Ref> refList = new Git(repository).branchList().setListMode(ListBranchCommand.ListMode.REMOTE).call();
+            final Ref ref = refList.stream()
+                                // Try origin/compareBranch first.
+                                .filter(r -> r.getName().equals(R_REMOTES + "origin/" + compareBranch))
+                                .findAny()
+                                .orElseGet(() -> refList.stream()
+                                                     // Fallback to */compareBranch
+                                                     .filter(r2 -> r2.getName().matches(R_REMOTES + "[^/]+/" + compareBranch))
+                                                     .findAny()
+                                                     .orElse(null));
+            if (ref != null)
+            {
+                final String remoteBranch = ref.getName();
+                log.warn(String.format("Local branch named %s not found, using %s instead.",
+                                       compareBranch, repository.shortenRemoteBranchName(remoteBranch)));
+                return remoteBranch;
+            }
+        }
+        catch (final GitAPIException e)
+        {
+            throw new RuntimeException(e);
+        }
+        return null;
     }
 
     /**
@@ -213,12 +266,15 @@ public class GitDiffChangeResolver
      * @return the commit.
      * @throws IOException if an I/O error occurs.
      */
+    @Nullable
+    @CheckForNull
     protected RevCommit getCommitForRef(final Repository repository, final String ref) throws IOException
     {
         final RevCommit commit;
         try (RevWalk walk = new RevWalk(repository))
         {
-            commit = walk.parseCommit(repository.findRef(ref).getObjectId());
+            final Ref repositoryRef = repository.findRef(ref);
+            commit = repositoryRef == null ? null : walk.parseCommit(repositoryRef.getObjectId());
             walk.dispose();
         }
         return commit;
