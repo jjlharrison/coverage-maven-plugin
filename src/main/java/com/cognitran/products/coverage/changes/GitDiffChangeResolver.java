@@ -214,7 +214,7 @@ public class GitDiffChangeResolver
             {
                 final String remoteBranch = ref.getName();
                 log.warn(String.format("Local branch named %s not found, using %s instead.",
-                                       compareBranch, repository.shortenRemoteBranchName(remoteBranch)));
+                                       compareBranch, shortenRefName(remoteBranch)));
                 return remoteBranch;
             }
         }
