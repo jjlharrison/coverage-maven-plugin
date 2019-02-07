@@ -243,3 +243,6 @@ $RECYCLE.BIN/
 # Override ignore of dictionaries. According to JetBrains, ignoring this file is optional in case 2 developers have the same name.
 # See https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 !.idea/dictionaries
+
+# Target directories in the integration test directory should not be ignored.
+!src/it/**/target
