@@ -107,11 +107,11 @@ public class ChangeCoverageReportMojo extends AbstractChangeCoverageMojo
                     throw new RuntimeException(e);
                 }
 
+                reportChangeCoverageMeasures(changes, logger);
+
                 if (changes.hasChanges())
                 {
                     logger.info(changes.toString());
-
-                    reportChangeCoverageMeasures(changes, logger);
 
                     appendLogFileToRepositoryLogFile(logger, logFile, repositoryLogFile);
                 }
@@ -216,24 +216,32 @@ public class ChangeCoverageReportMojo extends AbstractChangeCoverageMojo
      */
     private void reportChangeCoverageMeasures(final ProjectChanges changes, final Logger logger)
     {
-        try (FileInputStream inputStream = new FileInputStream(jacocoXmlReport))
+        try
         {
-            final JacocoReportParser parser = new JacocoReportParser(changes.getNewFiles(), changes.getChangedLinesByFile());
-            Utilities.parse(new InputSource(inputStream), parser, false);
-            final List<ChangeCoverage> coverage = parser.getCoverage();
-            coverage.stream()
-                .filter(ChangeCoverage::hasTestableChanges)
-                .forEach(c -> c.describe(logger));
+            double changeCodeBranchCoverage = 100d;
+            double changeCodeLineCoverage = 100d;
+            if (changes.hasChanges())
+            {
+                final List<ChangeCoverage> coverage;
+                try (FileInputStream inputStream = new FileInputStream(jacocoXmlReport))
+                {
+                    final JacocoReportParser parser = new JacocoReportParser(changes.getNewFiles(), changes.getChangedLinesByFile());
+                    Utilities.parse(new InputSource(inputStream), parser, false);
+                    coverage = parser.getCoverage();
+                }
 
-            final double changeCodeBranchCoverage =
-                calculateChangeCoveragePercentage(coverage, "branch",
-                                                  ChangeCoverage::getCoveredChangedBranchesCount,
-                                                  ChangeCoverage::getTotalChangedBranchesCount, logger);
+                coverage.stream()
+                    .filter(ChangeCoverage::hasTestableChanges)
+                    .forEach(c -> c.describe(logger));
 
-            final double changeCodeLineCoverage =
-                calculateChangeCoveragePercentage(coverage, "line",
-                                                  ChangeCoverage::getCoveredChangedLinesCount,
-                                                  ChangeCoverage::getTotalChangedLinesCount, logger);
+                changeCodeBranchCoverage = calculateChangeCoveragePercentage(coverage, "branch",
+                                                                             ChangeCoverage::getCoveredChangedBranchesCount,
+                                                                             ChangeCoverage::getTotalChangedBranchesCount, logger);
+
+                changeCodeLineCoverage = calculateChangeCoveragePercentage(coverage, "line",
+                                                                           ChangeCoverage::getCoveredChangedLinesCount,
+                                                                           ChangeCoverage::getTotalChangedLinesCount, logger);
+            }
 
             final ChangeCoverageReport report = new ChangeCoverageReport();
             final ChangeCoverageReportSummary summary = new ChangeCoverageReportSummary();

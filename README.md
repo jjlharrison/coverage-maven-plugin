@@ -117,6 +117,8 @@ The `report` goal must have been executed before this goal is executed.
 
 ### 0.3.0
 
+- [[COVR-6](https://jira.cognitran.com/browse/COVR-6)] XML report file is now generated when there are no changes (coverage values are set to 100%).
+
 - [[COVR-8](https://jira.cognitran.com/browse/COVR-8)] Add JAXB dependencies to support Java 9+.
 
 ### 0.2.0
