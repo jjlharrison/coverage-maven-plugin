@@ -115,6 +115,10 @@ The `report` goal must have been executed before this goal is executed.
 
 ## Change Log
 
+### 0.3.0
+
+- [[COVR-8](https://jira.cognitran.com/browse/COVR-8)] Add JAXB dependencies to support Java 9+.
+
 ### 0.2.0
 
 - [[COVR-4](https://jira.cognitran.com/browse/COVR-4)] Add `report` and `check` goals to measure test coverage for changed code and optionally fail build if coverage isn't high enough. 
