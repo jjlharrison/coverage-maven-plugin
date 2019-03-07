@@ -115,6 +115,12 @@ The `report` goal must have been executed before this goal is executed.
 
 ## Change Log
 
+### 0.3.1
+
+- [[COVR-9](https://jira.cognitran.com/browse/COVR-9)] Fix some lines falsely considered as uncovered when calculating coverage percentage.
+
+    This happened when JaCoCo reports a line with both covered and uncovered instructions.
+
 ### 0.3.0
 
 - [[COVR-6](https://jira.cognitran.com/browse/COVR-6)] XML report file is now generated when there are no changes (coverage values are set to 100%).
