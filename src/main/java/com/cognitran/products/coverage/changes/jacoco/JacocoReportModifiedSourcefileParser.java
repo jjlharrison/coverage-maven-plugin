@@ -49,10 +49,12 @@ public class JacocoReportModifiedSourcefileParser extends DefaultHandler
         if ("line".equals(qName) && coverage.getChangedLineNumbers().contains(Integer.valueOf(attributes.getValue("nr"))))
         {
             //<line nr="45" mi="0" ci="5" mb="0" cb="0"/>
+            final boolean hasCoveredInstructions = parseNullableIntString(attributes.getValue("ci")) > 0;
+            final boolean hasMissedInstructions = parseNullableIntString(attributes.getValue("mi")) > 0;
             coverage.getCoverage().add(
                 new LineCodeCoverage(parseNullableIntString(attributes.getValue("nr")),
-                                     parseNullableIntString(attributes.getValue("ci")) > 0 ? 1 : 0,
-                                     parseNullableIntString(attributes.getValue("mi")) > 0 ? 1 : 0,
+                                     hasCoveredInstructions ? 1 : 0,
+                                     !hasCoveredInstructions && hasMissedInstructions ? 1 : 0,
                                      parseNullableIntString(attributes.getValue("cb")),
                                      parseNullableIntString(attributes.getValue("mb"))
                 ));
