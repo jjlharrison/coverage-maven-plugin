@@ -50,8 +50,8 @@ timeout(time: 3, unit: 'HOURS') {
     ])).split('\\s+')))
     notificationRecipients.unique()
 
-    // Run on any node with itis (or cloud-build) and linux labels.
-    node('(itis || cloud-build) && linux') {
+    // Run on any node with products and linux labels.
+    node('products && linux') {
         try {
             stage('Checkout') {
                 // Git checkout the branch.
