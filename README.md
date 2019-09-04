@@ -112,25 +112,3 @@ The `report` goal must have been executed before this goal is executed.
 
 1. `mvn clean test jacoco:report coverage:update-coverage-requirement` will update the properties.
 2. Review & commit changes.
-
-## Change Log
-
-### 0.3.1
-
-- [[COVR-9](https://jira.cognitran.com/browse/COVR-9)] Fix some lines falsely considered as uncovered when calculating coverage percentage.
-
-    This happened when JaCoCo reports a line with both covered and uncovered instructions.
-
-### 0.3.0
-
-- [[COVR-6](https://jira.cognitran.com/browse/COVR-6)] XML report file is now generated when there are no changes (coverage values are set to 100%).
-
-- [[COVR-8](https://jira.cognitran.com/browse/COVR-8)] Add JAXB dependencies to support Java 9+.
-
-### 0.2.0
-
-- [[COVR-4](https://jira.cognitran.com/browse/COVR-4)] Add `report` and `check` goals to measure test coverage for changed code and optionally fail build if coverage isn't high enough. 
-
-### 0.1.0 
-
-- [[COVR-2](https://jira.cognitran.com/browse/COVR-2)] Initial implementation of `update-coverage-requirement` Mojo. 

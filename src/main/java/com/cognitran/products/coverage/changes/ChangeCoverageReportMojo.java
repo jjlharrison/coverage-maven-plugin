@@ -37,7 +37,6 @@ import com.cognitran.products.coverage.changes.diff.ProjectChanges;
 import com.cognitran.products.coverage.changes.jacoco.JacocoReportParser;
 import com.cognitran.products.coverage.changes.report.ChangeCoverageReport;
 import com.cognitran.products.coverage.changes.report.ChangeCoverageReportSummary;
-import com.cognitran.products.utilities.io.Files;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
@@ -139,7 +138,7 @@ public class ChangeCoverageReportMojo extends AbstractChangeCoverageMojo
                 logger.flush();
                 try
                 {
-                    Files.forceMkdir(repositoryLogFile.getParentFile());
+                    Utilities.forceMkdir(repositoryLogFile.getParentFile());
                     try (FileOutputStream fileOutputStream = new FileOutputStream(repositoryLogFile, true);
                          OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream, UTF_8);
                          PrintWriter printWriter = new PrintWriter(outputStreamWriter);
@@ -249,7 +248,7 @@ public class ChangeCoverageReportMojo extends AbstractChangeCoverageMojo
             summary.setLine(changeCodeLineCoverage);
             report.setSummary(summary);
             final File xmlReportFile = getXmlReportFile();
-            Files.forceMkdir(xmlReportFile.getParentFile());
+            Utilities.forceMkdir(xmlReportFile.getParentFile());
             JAXB.marshal(report, xmlReportFile);
         }
         catch (final IOException | SAXException e)

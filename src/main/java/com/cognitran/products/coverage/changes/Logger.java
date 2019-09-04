@@ -44,6 +44,7 @@ public class Logger implements Closeable, Flushable
      * @param file the file to output logs to.
      * @return the print writer.
      */
+    @SuppressWarnings("PMD.CloseResource") // fileOutputStream and outputStreamWriter will be closed when the printWriter is closed.
     public PrintWriter addOutputFile(final File file)
     {
         try

@@ -116,40 +116,42 @@ public class GitDiffChangeResolver
             final RevCommit mergeBase = getMergeBase(repository, "HEAD", longBranchName);
             final AbstractTreeIterator newTreeParser = prepareTreeParser(repository,
                                                                          mergeBase);
-            final DiffFormatter formatter = new DiffFormatter(NULL_OUTPUT_STREAM);
-            formatter.setDiffComparator(RawTextComparator.WS_IGNORE_ALL);
-            formatter.setRepository(repository);
-            formatter.setContext(0);
-
-            // Filter files not in source roots.
-            final List<TreeFilter> pathFilters = compileSourceRoots.stream().map(File::new).map(File::toURI)
-                                                     .map(s -> repositoryRootDirectoryUri.relativize(s).getPath())
-                                                     .map(PathFilter::create)
-                                                     .collect(Collectors.toList());
-            formatter.setPathFilter(pathFilters.size() > 1 ? OrTreeFilter.create(pathFilters) : pathFilters.get(0));
-
-            final List<DiffEntry> diffEntries = formatter.scan(newTreeParser, oldTreeParser);
-            final Map<String, Set<Integer>> changedLinesByFile = new HashMap<>(capacity(diffEntries.size()));
-            final Set<String> newFiles = new HashSet<>(capacity(diffEntries.size()));
-            final ProjectChanges changes = new ProjectChanges(changedLinesByFile, newFiles);
-            for (final DiffEntry entry : diffEntries)
+            try (DiffFormatter formatter = new DiffFormatter(NULL_OUTPUT_STREAM))
             {
-                final String filePath = entry.getNewPath();
-                if (filePath.startsWith(repositoryRelativeModuleUri.toString()))
+                formatter.setDiffComparator(RawTextComparator.WS_IGNORE_ALL);
+                formatter.setRepository(repository);
+                formatter.setContext(0);
+
+                // Filter files not in source roots.
+                final List<TreeFilter> pathFilters = compileSourceRoots.stream().map(File::new).map(File::toURI)
+                                                         .map(s -> repositoryRootDirectoryUri.relativize(s).getPath())
+                                                         .map(PathFilter::create)
+                                                         .collect(Collectors.toList());
+                formatter.setPathFilter(pathFilters.size() > 1 ? OrTreeFilter.create(pathFilters) : pathFilters.get(0));
+
+                final List<DiffEntry> diffEntries = formatter.scan(newTreeParser, oldTreeParser);
+                final Map<String, Set<Integer>> changedLinesByFile = new HashMap<>(capacity(diffEntries.size()));
+                final Set<String> newFiles = new HashSet<>(capacity(diffEntries.size()));
+                final ProjectChanges changes = new ProjectChanges(changedLinesByFile, newFiles);
+                for (final DiffEntry entry : diffEntries)
                 {
-                    final List<URI> entrySourceRoots = compileSourceRoots.stream()
-                                                           .map(File::new)
-                                                           .map(File::toURI)
-                                                           .map(repositoryRootDirectoryUri::relativize)
-                                                           .filter(u -> filePath.startsWith(u.getPath()))
-                                                           .collect(Collectors.toList());
-                    for (final URI repositoryRelativeSourceRootUri : entrySourceRoots)
+                    final String filePath = entry.getNewPath();
+                    if (filePath.startsWith(repositoryRelativeModuleUri.toString()))
                     {
-                        processDiffEntry(formatter, entry, repositoryRelativeSourceRootUri, newFiles, changedLinesByFile);
+                        final List<URI> entrySourceRoots = compileSourceRoots.stream()
+                                                               .map(File::new)
+                                                               .map(File::toURI)
+                                                               .map(repositoryRootDirectoryUri::relativize)
+                                                               .filter(u -> filePath.startsWith(u.getPath()))
+                                                               .collect(Collectors.toList());
+                        for (final URI repositoryRelativeSourceRootUri : entrySourceRoots)
+                        {
+                            processDiffEntry(formatter, entry, repositoryRelativeSourceRootUri, newFiles, changedLinesByFile);
+                        }
                     }
                 }
+                return changes;
             }
-            return changes;
         }
         return new ProjectChanges(Collections.emptyMap(), Collections.emptySet());
     }
