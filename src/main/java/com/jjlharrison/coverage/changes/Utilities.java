@@ -46,7 +46,7 @@ public class Utilities
 
     /**
      * Returns a capacity for a HashSet or HashMap that is sufficient to keep the map from being resized as
-     * long as it grows no larger than expectedSize and the load factor is >= its
+     * long as it grows no larger than expectedSize and the load factor is &gt;= its
      * default (0.75).
      *
      * @param expectedSize the expected size.
