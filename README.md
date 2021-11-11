@@ -4,7 +4,7 @@
 
     <!-- Must come after jacoco:report -->
     <plugin>
-        <groupId>com.cognitran.products</groupId>
+        <groupId>com.jjlharrison</groupId>
         <artifactId>coverage-maven-plugin</artifactId>
         <version>{{VERSION}}</version>
         <configuration>
@@ -43,3 +43,7 @@ If the `compareBranch` is not found, but a remote branch with that name exists, 
 The `check` goal will read the change coverage report and will fail the build if the coverage levels fall below the requirements configured.
 
 The `report` goal must have been executed before this goal is executed.
+
+## JDK Support
+
+This project aims to support JDK 1.8 and above. If any issues are found with a particular JDK version, please create a new issue or submit a pull request.

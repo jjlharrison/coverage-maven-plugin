@@ -1,15 +1,9 @@
 <?xml version="1.0"?>
-<!--
-  ~ Copyright (c) 2015 Cognitran Limited. All Rights Reserved.
-  -->
-<ruleset name="Cognitran Products Ruleset"
+<ruleset name="Ruleset"
          xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
-    <description>
-        Cognitran Products default PMD rule set.
-    </description>
-
+    <description>Ruleset</description>
     <!--<rule ref="category/java/bestpractices.xml/AbstractClassWithoutAbstractMethod"/>-->
     <!--<rule ref="category/java/bestpractices.xml/AccessorClassGeneration"/>-->
     <!--<rule ref="category/java/bestpractices.xml/AccessorMethodGeneration"/>-->
@@ -34,8 +28,7 @@
     <!--<rule ref="category/java/bestpractices.xml/LooseCoupling"/> Only applies for collections and doesn't account for serializable -->
     <!--<rule ref="category/java/bestpractices.xml/MethodReturnsInternalArray"/>-->
     <!--<rule ref="category/java/bestpractices.xml/OneDeclarationPerLine"/>-->
-    <rule ref="category/java/bestpractices.xml/PositionLiteralsFirstInCaseInsensitiveComparisons"/>
-    <rule ref="category/java/bestpractices.xml/PositionLiteralsFirstInComparisons"/>
+    <rule ref="category/java/bestpractices.xml/LiteralsFirstInComparisons"/>
     <rule ref="category/java/bestpractices.xml/PreserveStackTrace"/>
     <rule ref="category/java/bestpractices.xml/ReplaceEnumerationWithIterator"/>
     <rule ref="category/java/bestpractices.xml/ReplaceHashtableWithMap"/>
@@ -43,7 +36,6 @@
     <!--<rule ref="category/java/bestpractices.xml/SwitchStmtsShouldHaveDefault"/>-->
     <rule ref="category/java/bestpractices.xml/SystemPrintln"/>
     <rule ref="category/java/bestpractices.xml/UnusedFormalParameter"/>
-    <rule ref="category/java/bestpractices.xml/UnusedImports"/>
     <rule ref="category/java/bestpractices.xml/UnusedLocalVariable"/>
     <rule ref="category/java/bestpractices.xml/UnusedPrivateField"/>
     <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod">
@@ -102,6 +94,7 @@
     <!--<rule ref="category/java/codestyle.xml/TooManyStaticImports"/>-->
     <!--<rule ref="category/java/codestyle.xml/UnnecessaryAnnotationValueElement"/>-->
     <!--<rule ref="category/java/codestyle.xml/UnnecessaryConstructor"/>-->
+    <rule ref="category/java/codestyle.xml/UnnecessaryImport"/>
     <rule ref="category/java/codestyle.xml/UnnecessaryLocalBeforeReturn"/>
     <rule ref="category/java/codestyle.xml/UnnecessaryModifier"/>
     <rule ref="category/java/codestyle.xml/UnnecessaryReturn"/>
@@ -172,7 +165,7 @@
     <!--<rule ref="category/java/errorprone.xml/AvoidLosingExceptionInformation"/>-->
     <rule ref="category/java/errorprone.xml/AvoidMultipleUnaryOperators"/>
     <rule ref="category/java/errorprone.xml/AvoidUsingOctalValues"/>
-    <rule ref="category/java/errorprone.xml/BadComparison"/>
+    <rule ref="category/java/errorprone.xml/ComparisonWithNaN"/>
     <!--<rule ref="category/java/errorprone.xml/BeanMembersShouldSerialize"/>-->
     <rule ref="category/java/errorprone.xml/BrokenNullCheck"/>
     <!--<rule ref="category/java/errorprone.xml/CallSuperFirst"/>-->
@@ -263,22 +256,18 @@
     <!--<rule ref="category/java/performance.xml/AvoidFileStream"/>-->
     <!--<rule ref="category/java/performance.xml/AvoidInstantiatingObjectsInLoops"/>-->
     <!--<rule ref="category/java/performance.xml/AvoidUsingShortType"/>-->
-    <rule ref="category/java/performance.xml/BigIntegerInstantiation"/>
-    <rule ref="category/java/performance.xml/BooleanInstantiation"/>
-    <rule ref="category/java/performance.xml/ByteInstantiation"/>
+    <rule ref="category/java/bestpractices.xml/PrimitiveWrapperInstantiation"/>
     <!--<rule ref="category/java/performance.xml/ConsecutiveAppendsShouldReuse"/>-->
     <rule ref="category/java/performance.xml/InefficientEmptyStringCheck"/>
     <rule ref="category/java/performance.xml/InefficientStringBuffering"/>
     <rule ref="category/java/performance.xml/InsufficientStringBufferDeclaration"/>
-    <rule ref="category/java/performance.xml/LongInstantiation"/>
     <rule ref="category/java/performance.xml/OptimizableToArrayCall"/>
     <!--<rule ref="category/java/performance.xml/RedundantFieldInitializer"/>-->
-    <!--<rule ref="category/java/performance.xml/SimplifyStartsWith"/> Removed under ITISP-61. -->
-    <rule ref="category/java/performance.xml/ShortInstantiation"/>
+    <!--<rule ref="category/java/performance.xml/SimplifyStartsWith"/> -->
     <rule ref="category/java/performance.xml/StringInstantiation"/>
     <rule ref="category/java/performance.xml/StringToString"/>
     <!--<rule ref="category/java/performance.xml/TooFewBranchesForASwitchStatement"/>-->
-    <rule ref="category/java/performance.xml/UnnecessaryWrapperObjectCreation"/>
+    <rule ref="category/java/performance.xml/UnnecessaryWrapperObjectCreation"/> <!-- Replaced by UnnecessaryBoxing in 7.0.0. -->
     <rule ref="category/java/performance.xml/UseArraysAsList"/>
     <rule ref="category/java/performance.xml/UseIndexOfChar"/>
     <rule ref="category/java/performance.xml/UselessStringValueOf"/>

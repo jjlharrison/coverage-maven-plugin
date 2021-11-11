@@ -1,6 +1,3 @@
-/*
- * Copyright (c) 2019 Cognitran Limited. All Rights Reserved.
- */
 
 
 import org.eclipse.jgit.api.Git
@@ -10,7 +7,7 @@ import java.nio.file.StandardCopyOption
 
 def git = Git.init().setDirectory((File) basedir).call()
 
-def sampleFilePath = "src/main/java/com/cognitran/products/Sample.java"
+def sampleFilePath = "src/main/java/com/jjlharrison/Sample.java"
 def file = new File((File) basedir, sampleFilePath)
 assert file.exists()
 

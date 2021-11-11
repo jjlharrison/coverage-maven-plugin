@@ -1,7 +1,4 @@
-/*
- * Copyright (c) 2019 Cognitran Limited. All Rights Reserved.
- */
-package com.cognitran.products;
+package com.jjlharrison;
 
 public class Sample
 {

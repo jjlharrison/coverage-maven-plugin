@@ -2,18 +2,9 @@
 <!DOCTYPE suppressions PUBLIC "-//Puppy Crawl//DTD Suppressions 1.1//EN"
                               "http://www.puppycrawl.com/dtds/suppressions_1_1.dtd">
 <suppressions>
-
-    <!-- Copyright header isn't required in package-info.java files. -->
-    <suppress id="copyright" files="[/\\]package-info.java"/>
-
-    <!-- Suppressions for test code:
-        Expression "test[/\\]src[/\\]com[/\\]cognitran[/\\].+?\.java" matches test Java files in the ITIS/TOPIx layout.
-        Expression "src[/\\]test[/\\]java[/\\]com[/\\]cognitran[/\\].+?\.java" matches test Java files in the standard Maven layout.
-    -->
-
     <!-- Star imports are useful for things like fluent assertions in unit tests (with AssertJ for example). -->
     <!-- Javadoc on test methods is not considered worth while. -->
     <suppress
         checks="AvoidStarImport|JavadocType|JavadocMethod|JavadocVariable|FileLength|IllegalCatch"
-        files="((test[/\\]src[/\\])|(src[/\\]test[/\\]java[/\\]))com[/\\]cognitran[/\\].+?\.java"/>
+        files="((test[/\\]src[/\\])|(src[/\\]test[/\\]java[/\\]))com[/\\].+?\.java"/>
 </suppressions>
