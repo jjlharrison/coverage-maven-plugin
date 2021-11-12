@@ -1,20 +1,41 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.jjlharrison</groupId>
     <artifactId>coverage-maven-plugin</artifactId>
     <packaging>maven-plugin</packaging>
-    <version>0.5.0-SNAPSHOT</version>
+    <version>0.4.0-SNAPSHOT</version>
+
     <name>Coverage Maven Plugin</name>
+    <description>Maven plugin to check test coverage of new changes compared to another Git branch.</description>
+    <url>https://github.com/jjlharrison/coverage-maven-plugin</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>http://www.opensource.org/licenses/mit-license.php</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>James Harrison</name>
+            <email>oss@jjlharrison.com</email>
+            <organization>James Harrison</organization>
+            <organizationUrl>https://github.com/jjlharrison</organizationUrl>
+        </developer>
+    </developers>
 
     <prerequisites>
         <maven>${maven.version.minimum}</maven>
     </prerequisites>
 
     <scm>
+        <connection>scm:git:git://github.com/jjlharrison/coverage-maven-plugin.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/jjlharrison/coverage-maven-plugin.git</developerConnection>
-      <tag>HEAD</tag>
-  </scm>
+        <url>http://github.com/jjlharrison/coverage-maven-plugin/tree/develop</url>
+    </scm>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -234,7 +255,7 @@
                 <configuration>
                     <goalPrefix>coverage</goalPrefix>
                     <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
-                    <mojoDependencies />
+                    <mojoDependencies/>
                     <helpPackageName>com.jjlharrison.coverage</helpPackageName>
                 </configuration>
                 <executions>
